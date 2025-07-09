@@ -1,6 +1,7 @@
 enum TabType {
   home('home'),
-  sftp('sftp');
+  sftp('sftp'),
+  terminal('terminal');
 
   const TabType(this.value);
 
@@ -13,6 +14,8 @@ enum TabType {
         return 'HOME';
       case TabType.sftp:
         return 'SFTP';
+      case TabType.terminal:
+        return 'Terminal';
     }
   }
 
@@ -23,6 +26,8 @@ enum TabType {
         return 'home';
       case TabType.sftp:
         return 'folder';
+      case TabType.terminal:
+        return 'terminal';
     }
   }
 

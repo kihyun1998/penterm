@@ -7,27 +7,22 @@ part 'tab_provider.g.dart';
 @riverpod
 class ActiveTab extends _$ActiveTab {
   @override
-  TabType build() {
-    return TabType.home; // 기본값: Home 탭
+  String build() {
+    return TabType.home.value; // 기본값: Home 탭
   }
 
   /// 특정 탭으로 전환
-  void setTab(TabType tabType) {
-    state = tabType;
+  void setTab(String tabId) {
+    state = tabId;
   }
 
   /// Home 탭으로 전환
   void goToHome() {
-    state = TabType.home;
+    state = TabType.home.value;
   }
 
   /// SFTP 탭으로 전환
   void goToSftp() {
-    state = TabType.sftp;
-  }
-
-  /// 탭 토글 (Home ↔ SFTP)
-  void toggleTab() {
-    state = state == TabType.home ? TabType.sftp : TabType.home;
+    state = TabType.sftp.value;
   }
 }
