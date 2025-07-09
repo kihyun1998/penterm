@@ -66,78 +66,81 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
           ),
 
           // 🎯 탭바 + 컨트롤 버튼
-          Row(
-            children: [
-              // 🏠 HOME 탭
-              AppIconTab(
-                text: TabType.home.displayName,
-                isActive: activeTab == TabType.home,
-                onPressed: () =>
-                    ref.read(activeTabProvider.notifier).goToHome(),
-              ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                /// 홈 탭
+                AppIconTab(
+                  text: TabType.home.displayName,
+                  isActive: activeTab == TabType.home,
+                  onPressed: () =>
+                      ref.read(activeTabProvider.notifier).goToHome(),
+                ),
 
-              const SizedBox(width: 4),
+                const SizedBox(width: 4),
 
-              // 📁 SFTP 탭
-              AppIconTab(
-                text: TabType.sftp.displayName,
-                isActive: activeTab == TabType.sftp,
-                onPressed: () =>
-                    ref.read(activeTabProvider.notifier).goToSftp(),
-              ),
+                /// SFTP 탭
+                AppIconTab(
+                  text: TabType.sftp.displayName,
+                  isActive: activeTab == TabType.sftp,
+                  onPressed: () =>
+                      ref.read(activeTabProvider.notifier).goToSftp(),
+                ),
 
-              // 🌌 중간 빈 공간
-              const Spacer(),
+                // 🌌 중간 빈 공간
+                const Spacer(),
 
-              // 🎯 제어 버튼 영역
-              Row(
-                children: [
-                  AppIconButton(
-                    width: 30,
-                    height: 30,
+                // 🎯 제어 버튼 영역
+                Row(
+                  children: [
+                    AppIconButton(
+                      width: 30,
+                      height: 30,
 
-                    /// icon
-                    icon: SVGAsset.windowMinimize,
-                    iconColor: ref.color.onSurfaceVariant,
-                    iconSize: 2,
-                    onPressed: () => windowManager.minimize(),
-                  ),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final isMaximized = ref.watch(isWindowMaximizedProvider);
-                      return AppIconButton(
-                        width: 30,
-                        height: 30,
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
+                      /// icon
+                      icon: SVGAsset.windowMinimize,
+                      iconColor: ref.color.onSurfaceVariant,
+                      iconSize: 2,
+                      onPressed: () => windowManager.minimize(),
+                    ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final isMaximized =
+                            ref.watch(isWindowMaximizedProvider);
+                        return AppIconButton(
+                          width: 30,
+                          height: 30,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
 
-                        /// icon
-                        icon: isMaximized
-                            ? SVGAsset.windowRestore
-                            : SVGAsset.windowMaximize,
-                        iconColor: ref.color.onSurfaceVariant,
-                        iconSize: 14,
-                        onPressed: () {
-                          ref
-                              .read(isWindowMaximizedProvider.notifier)
-                              .toggleMaximize();
-                        },
-                      );
-                    },
-                  ),
-                  AppIconButton(
-                    width: 30,
-                    height: 30,
+                          /// icon
+                          icon: isMaximized
+                              ? SVGAsset.windowRestore
+                              : SVGAsset.windowMaximize,
+                          iconColor: ref.color.onSurfaceVariant,
+                          iconSize: 14,
+                          onPressed: () {
+                            ref
+                                .read(isWindowMaximizedProvider.notifier)
+                                .toggleMaximize();
+                          },
+                        );
+                      },
+                    ),
+                    AppIconButton(
+                      width: 30,
+                      height: 30,
 
-                    /// icon
-                    icon: SVGAsset.windowClose,
-                    iconColor: ref.color.onSurfaceVariant,
-                    iconSize: 14,
-                    onPressed: () => windowManager.close(),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-              ),
-            ],
+                      /// icon
+                      icon: SVGAsset.windowClose,
+                      iconColor: ref.color.onSurfaceVariant,
+                      iconSize: 14,
+                      onPressed: () => windowManager.close(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),

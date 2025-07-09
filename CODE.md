@@ -265,6 +265,7 @@ class DarkTheme implements AppTheme {
   DarkTheme._internal() {
     _color = const AppColor(
       primary: DarkPalette.primary,
+      primarySoft: DarkPalette.primarySoft,
       primaryVariant: DarkPalette.primaryVariant,
       primaryHover: DarkPalette.primaryHover,
       primarySplash: DarkPalette.primarySplash,
@@ -274,12 +275,14 @@ class DarkTheme implements AppTheme {
       background: DarkPalette.background,
       surface: DarkPalette.surface,
       surfaceVariant: DarkPalette.surfaceVariant,
+      surfaceVariantSoft: DarkPalette.surfaceVariantSoft,
       terminalBackground: DarkPalette.terminalBackground,
       terminalSurface: DarkPalette.terminalSurface,
       terminalBorder: DarkPalette.terminalBorder,
       onPrimary: DarkPalette.onPrimary,
       onSecondary: DarkPalette.onSecondary,
       onBackground: DarkPalette.onBackground,
+      onBackgroundSoft: DarkPalette.onBackgroundSoft,
       onSurface: DarkPalette.onSurface,
       onSurfaceVariant: DarkPalette.onSurfaceVariant,
       terminalText: DarkPalette.terminalText,
@@ -345,80 +348,9 @@ class DarkTheme implements AppTheme {
 part of 'app_theme.dart';
 
 class AppColor {
-  const AppColor({
-    // Primary colors
-    required this.primary,
-    required this.primaryVariant,
-    required this.primaryHover,
-    required this.primarySplash,
-    required this.primaryHighlight,
-    required this.secondary,
-    required this.secondaryVariant,
-
-    // Background colors
-    required this.background,
-    required this.surface,
-    required this.surfaceVariant,
-
-    // Terminal specific colors
-    required this.terminalBackground,
-    required this.terminalSurface,
-    required this.terminalBorder,
-
-    // Text colors
-    required this.onPrimary,
-    required this.onSecondary,
-    required this.onBackground,
-    required this.onSurface,
-    required this.onSurfaceVariant,
-
-    // Terminal text colors
-    required this.terminalText,
-    required this.terminalPrompt,
-    required this.terminalCommand,
-    required this.terminalOutput,
-
-    // Status colors
-    required this.success,
-    required this.successVariant,
-    required this.error,
-    required this.errorVariant,
-    required this.warning,
-    required this.info,
-
-    // Connection status
-    required this.connected,
-    required this.disconnected,
-    required this.connecting,
-
-    // Interactive colors
-    required this.hover,
-    required this.splash,
-    required this.highlight,
-    required this.pressed,
-    required this.disabled,
-    required this.border,
-
-    // Divider and outline
-    required this.divider,
-    required this.outline,
-
-    // Accent colors for neon effects
-    required this.neonPurple,
-    required this.neonGreen,
-    required this.neonPink,
-    required this.neonBlue,
-
-    // Gaming-specific colors
-    required this.gamingHighlight,
-    required this.gamingShadow,
-    required this.powerGlow,
-    required this.neonTrail,
-    required this.energyCore,
-  });
-
   // Primary colors
   final Color primary;
+  final Color primarySoft;
   final Color primaryVariant;
   final Color primaryHover;
   final Color primarySplash;
@@ -431,6 +363,7 @@ class AppColor {
   final Color background;
   final Color surface;
   final Color surfaceVariant;
+  final Color surfaceVariantSoft;
 
   // Terminal specific colors
   final Color terminalBackground;
@@ -441,6 +374,7 @@ class AppColor {
   final Color onPrimary;
   final Color onSecondary;
   final Color onBackground;
+  final Color onBackgroundSoft;
   final Color onSurface;
   final Color onSurfaceVariant;
 
@@ -488,8 +422,63 @@ class AppColor {
   final Color neonTrail;
   final Color energyCore;
 
+  const AppColor({
+    required this.primary,
+    required this.primarySoft,
+    required this.primaryVariant,
+    required this.primaryHover,
+    required this.primarySplash,
+    required this.primaryHighlight,
+    required this.secondary,
+    required this.secondaryVariant,
+    required this.background,
+    required this.surface,
+    required this.surfaceVariant,
+    required this.surfaceVariantSoft,
+    required this.terminalBackground,
+    required this.terminalSurface,
+    required this.terminalBorder,
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.onBackground,
+    required this.onBackgroundSoft,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.terminalText,
+    required this.terminalPrompt,
+    required this.terminalCommand,
+    required this.terminalOutput,
+    required this.success,
+    required this.successVariant,
+    required this.error,
+    required this.errorVariant,
+    required this.warning,
+    required this.info,
+    required this.connected,
+    required this.disconnected,
+    required this.connecting,
+    required this.hover,
+    required this.splash,
+    required this.highlight,
+    required this.pressed,
+    required this.disabled,
+    required this.border,
+    required this.divider,
+    required this.outline,
+    required this.neonPurple,
+    required this.neonGreen,
+    required this.neonPink,
+    required this.neonBlue,
+    required this.gamingHighlight,
+    required this.gamingShadow,
+    required this.powerGlow,
+    required this.neonTrail,
+    required this.energyCore,
+  });
+
   AppColor copyWith({
     Color? primary,
+    Color? primarySoft,
     Color? primaryVariant,
     Color? primaryHover,
     Color? primarySplash,
@@ -499,12 +488,14 @@ class AppColor {
     Color? background,
     Color? surface,
     Color? surfaceVariant,
+    Color? surfaceVariantSoft,
     Color? terminalBackground,
     Color? terminalSurface,
     Color? terminalBorder,
     Color? onPrimary,
     Color? onSecondary,
     Color? onBackground,
+    Color? onBackgroundSoft,
     Color? onSurface,
     Color? onSurfaceVariant,
     Color? terminalText,
@@ -540,6 +531,7 @@ class AppColor {
   }) {
     return AppColor(
       primary: primary ?? this.primary,
+      primarySoft: primarySoft ?? this.primarySoft,
       primaryVariant: primaryVariant ?? this.primaryVariant,
       primaryHover: primaryHover ?? this.primaryHover,
       primarySplash: primarySplash ?? this.primarySplash,
@@ -549,12 +541,14 @@ class AppColor {
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surfaceVariant: surfaceVariant ?? this.surfaceVariant,
+      surfaceVariantSoft: surfaceVariantSoft ?? this.surfaceVariantSoft,
       terminalBackground: terminalBackground ?? this.terminalBackground,
       terminalSurface: terminalSurface ?? this.terminalSurface,
       terminalBorder: terminalBorder ?? this.terminalBorder,
       onPrimary: onPrimary ?? this.onPrimary,
       onSecondary: onSecondary ?? this.onSecondary,
       onBackground: onBackground ?? this.onBackground,
+      onBackgroundSoft: onBackgroundSoft ?? this.onBackgroundSoft,
       onSurface: onSurface ?? this.onSurface,
       onSurfaceVariant: onSurfaceVariant ?? this.onSurfaceVariant,
       terminalText: terminalText ?? this.terminalText,
@@ -1523,6 +1517,7 @@ class LightTheme implements AppTheme {
   LightTheme._internal() {
     _color = const AppColor(
       primary: LightPalette.primary,
+      primarySoft: LightPalette.primarySoft,
       primaryVariant: LightPalette.primaryVariant,
       primaryHover: LightPalette.primaryHover,
       primarySplash: LightPalette.primarySplash,
@@ -1532,12 +1527,14 @@ class LightTheme implements AppTheme {
       background: LightPalette.background,
       surface: LightPalette.surface,
       surfaceVariant: LightPalette.surfaceVariant,
+      surfaceVariantSoft: LightPalette.surfaceVariantSoft,
       terminalBackground: LightPalette.terminalBackground,
       terminalSurface: LightPalette.terminalSurface,
       terminalBorder: LightPalette.terminalBorder,
       onPrimary: LightPalette.onPrimary,
       onSecondary: LightPalette.onSecondary,
       onBackground: LightPalette.onBackground,
+      onBackgroundSoft: LightPalette.onBackgroundSoft,
       onSurface: LightPalette.onSurface,
       onSurfaceVariant: LightPalette.onSurfaceVariant,
       terminalText: LightPalette.terminalText,
@@ -1728,6 +1725,8 @@ import 'package:flutter/material.dart';
 abstract class DarkPalette {
 // Primary colors - Neon/Gaming Theme
   static const Color primary = Color(0xFF8B5CF6); // Violet-500
+  static const Color primarySoft =
+      Color(0x268B5CF6); // primary.withOpacity(0.15) - 활성 탭 배경
   static const Color primaryVariant = Color(0xFF7C3AED); // Violet-600
   static const Color primaryHover =
       Color(0x1A8B5CF6); // Violet-500 with 10% opacity
@@ -1742,6 +1741,8 @@ abstract class DarkPalette {
   static const Color background = Color(0xFF111827); // Gray-900
   static const Color surface = Color(0xFF1F2937); // Gray-800
   static const Color surfaceVariant = Color(0xFF374151); // Gray-700
+  static const Color surfaceVariantSoft =
+      Color(0x66374151); // surfaceVariant.withOpacity(0.4) - 비활성 탭 배경
 
   // Terminal specific colors
   static const Color terminalBackground = Color(0xFF000000); // Pure black
@@ -1752,6 +1753,8 @@ abstract class DarkPalette {
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color onSecondary = Color(0xFFFFFFFF);
   static const Color onBackground = Color(0xFFF9FAFB); // Gray-50
+  static const Color onBackgroundSoft =
+      Color(0xB3F9FAFB); // onBackground.withOpacity(0.7) - 부드러운 텍스트
   static const Color onSurface = Color(0xFFF9FAFB); // Gray-50
   static const Color onSurfaceVariant = Color(0xFF9CA3AF); // Gray-400
 
@@ -1934,6 +1937,8 @@ import 'package:flutter/material.dart';
 abstract class LightPalette {
 // Primary colors - Neon/Gaming Theme
   static const Color primary = Color(0xFF8B5CF6); // Violet-500
+  static const Color primarySoft =
+      Color(0x268B5CF6); // primary.withOpacity(0.15) - 활성 탭 배경
   static const Color primaryVariant = Color(0xFF7C3AED); // Violet-600
   static const Color primaryHover =
       Color(0x1A8B5CF6); // Violet-500 with 10% opacity
@@ -1948,6 +1953,8 @@ abstract class LightPalette {
   static const Color background = Color(0xFFF8FAFC); // 약간 보라 틴트
   static const Color surface = Color(0xFFF1F5F9); // 쿨톤 표면
   static const Color surfaceVariant = Color(0xFFE2E8F0); // 더 진한 쿨톤
+  static const Color surfaceVariantSoft =
+      Color(0x66E2E8F0); // surfaceVariant.withOpacity(0.4) - 비활성 탭 배경
 
   // Terminal specific colors
   static const Color terminalBackground = Color(0xFF1F2937); // Gray-800
@@ -1958,6 +1965,8 @@ abstract class LightPalette {
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color onSecondary = Color(0xFFFFFFFF);
   static const Color onBackground = Color(0xFF111827); // Gray-900
+  static const Color onBackgroundSoft =
+      Color(0xB3111827); // onBackground.withOpacity(0.7) - 부드러운 텍스트
   static const Color onSurface = Color(0xFF111827); // Gray-900
   static const Color onSurfaceVariant = Color(0xFF6B7280); // Gray-500
 
@@ -2231,9 +2240,8 @@ class AppIconTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AppButton(
-      backgroundColor: isActive
-          ? ref.color.primary.withOpacity(0.15)
-          : ref.color.surfaceVariant.withOpacity(0.4),
+      backgroundColor:
+          isActive ? ref.color.primarySoft : ref.color.surfaceVariantSoft,
       hoverColor: isActive ? ref.theme.color.primaryHover : null,
       splashColor: isActive ? ref.theme.color.primarySplash : null,
       highlightColor: isActive ? ref.theme.color.primaryHighlight : null,
@@ -2255,9 +2263,7 @@ class AppIconTab extends ConsumerWidget {
         child: Text(
           text,
           style: ref.font.semiBoldText12.copyWith(
-            color: isActive
-                ? ref.color.primary
-                : ref.color.onBackground.withOpacity(0.7),
+            color: isActive ? ref.color.primary : ref.color.onBackgroundSoft,
           ),
         ),
       ),
@@ -2336,78 +2342,81 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
           ),
 
           // 🎯 탭바 + 컨트롤 버튼
-          Row(
-            children: [
-              // 🏠 HOME 탭
-              AppIconTab(
-                text: TabType.home.displayName,
-                isActive: activeTab == TabType.home,
-                onPressed: () =>
-                    ref.read(activeTabProvider.notifier).goToHome(),
-              ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                // 🏠 HOME 탭
+                AppIconTab(
+                  text: TabType.home.displayName,
+                  isActive: activeTab == TabType.home,
+                  onPressed: () =>
+                      ref.read(activeTabProvider.notifier).goToHome(),
+                ),
 
-              const SizedBox(width: 4),
+                const SizedBox(width: 4),
 
-              // 📁 SFTP 탭
-              AppIconTab(
-                text: TabType.sftp.displayName,
-                isActive: activeTab == TabType.sftp,
-                onPressed: () =>
-                    ref.read(activeTabProvider.notifier).goToSftp(),
-              ),
+                // 📁 SFTP 탭
+                AppIconTab(
+                  text: TabType.sftp.displayName,
+                  isActive: activeTab == TabType.sftp,
+                  onPressed: () =>
+                      ref.read(activeTabProvider.notifier).goToSftp(),
+                ),
 
-              // 🌌 중간 빈 공간
-              const Spacer(),
+                // 🌌 중간 빈 공간
+                const Spacer(),
 
-              // 🎯 제어 버튼 영역
-              Row(
-                children: [
-                  AppIconButton(
-                    width: 30,
-                    height: 30,
+                // 🎯 제어 버튼 영역
+                Row(
+                  children: [
+                    AppIconButton(
+                      width: 30,
+                      height: 30,
 
-                    /// icon
-                    icon: SVGAsset.windowMinimize,
-                    iconColor: ref.color.onBackground,
-                    iconSize: 2,
-                    onPressed: () => windowManager.minimize(),
-                  ),
-                  Consumer(
-                    builder: (context, ref, child) {
-                      final isMaximized = ref.watch(isWindowMaximizedProvider);
-                      return AppIconButton(
-                        width: 30,
-                        height: 30,
-                        margin: const EdgeInsets.symmetric(horizontal: 5),
+                      /// icon
+                      icon: SVGAsset.windowMinimize,
+                      iconColor: ref.color.onSurfaceVariant,
+                      iconSize: 2,
+                      onPressed: () => windowManager.minimize(),
+                    ),
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final isMaximized =
+                            ref.watch(isWindowMaximizedProvider);
+                        return AppIconButton(
+                          width: 30,
+                          height: 30,
+                          margin: const EdgeInsets.symmetric(horizontal: 5),
 
-                        /// icon
-                        icon: isMaximized
-                            ? SVGAsset.windowRestore
-                            : SVGAsset.windowMaximize,
-                        iconColor: ref.color.onBackground,
-                        iconSize: 14,
-                        onPressed: () {
-                          ref
-                              .read(isWindowMaximizedProvider.notifier)
-                              .toggleMaximize();
-                        },
-                      );
-                    },
-                  ),
-                  AppIconButton(
-                    width: 30,
-                    height: 30,
+                          /// icon
+                          icon: isMaximized
+                              ? SVGAsset.windowRestore
+                              : SVGAsset.windowMaximize,
+                          iconColor: ref.color.onSurfaceVariant,
+                          iconSize: 14,
+                          onPressed: () {
+                            ref
+                                .read(isWindowMaximizedProvider.notifier)
+                                .toggleMaximize();
+                          },
+                        );
+                      },
+                    ),
+                    AppIconButton(
+                      width: 30,
+                      height: 30,
 
-                    /// icon
-                    icon: SVGAsset.windowClose,
-                    iconColor: ref.color.onBackground,
-                    iconSize: 14,
-                    onPressed: () => windowManager.close(),
-                  ),
-                  const SizedBox(width: 4),
-                ],
-              ),
-            ],
+                      /// icon
+                      icon: SVGAsset.windowClose,
+                      iconColor: ref.color.onSurfaceVariant,
+                      iconSize: 14,
+                      onPressed: () => windowManager.close(),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
