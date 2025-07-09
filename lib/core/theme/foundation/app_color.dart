@@ -3,90 +3,226 @@ part of 'app_theme.dart';
 
 class AppColor {
   const AppColor({
-    required this.background,
-    required this.text,
-    required this.hint,
-    required this.border,
-    required this.cardBackground,
-    required this.cardButton,
-    required this.onCardButton,
-    required this.cardActionButton,
-    required this.onCardActionButton,
+    // Primary colors
     required this.primary,
-    required this.onPrimary,
+    required this.primaryVariant,
     required this.secondary,
+    required this.secondaryVariant,
+
+    // Background colors
+    required this.background,
+    required this.surface,
+    required this.surfaceVariant,
+
+    // Terminal specific colors
+    required this.terminalBackground,
+    required this.terminalSurface,
+    required this.terminalBorder,
+
+    // Text colors
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.onBackground,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+
+    // Terminal text colors
+    required this.terminalText,
+    required this.terminalPrompt,
+    required this.terminalCommand,
+    required this.terminalOutput,
+
+    // Status colors
+    required this.success,
+    required this.successVariant,
+    required this.error,
+    required this.errorVariant,
+    required this.warning,
+    required this.info,
+
+    // Connection status
+    required this.connected,
+    required this.disconnected,
+    required this.connecting,
+
+    // Interactive colors
     required this.hover,
-    required this.splash,
-    required this.highlight,
-    required this.primaryHover,
-    required this.primarySplash,
-    required this.primaryHighlight,
+    required this.pressed,
+    required this.disabled,
+    required this.border,
+
+    // Divider and outline
+    required this.divider,
+    required this.outline,
+
+    // Accent colors for neon effects
+    required this.neonPurple,
+    required this.neonGreen,
+    required this.neonPink,
+    required this.neonBlue,
+
+    // Gaming-specific colors
+    required this.gamingHighlight,
+    required this.gamingShadow,
+    required this.powerGlow,
+    required this.neonTrail,
+    required this.energyCore,
   });
 
-  /// default
+  // Primary colors
+  final Color primary;
+  final Color primaryVariant;
+  final Color secondary;
+  final Color secondaryVariant;
+
+  // Background colors
   final Color background;
-  final Color text;
-  final Color hint;
+  final Color surface;
+  final Color surfaceVariant;
+
+  // Terminal specific colors
+  final Color terminalBackground;
+  final Color terminalSurface;
+  final Color terminalBorder;
+
+  // Text colors
+  final Color onPrimary;
+  final Color onSecondary;
+  final Color onBackground;
+  final Color onSurface;
+  final Color onSurfaceVariant;
+
+  // Terminal text colors
+  final Color terminalText;
+  final Color terminalPrompt;
+  final Color terminalCommand;
+  final Color terminalOutput;
+
+  // Status colors
+  final Color success;
+  final Color successVariant;
+  final Color error;
+  final Color errorVariant;
+  final Color warning;
+  final Color info;
+
+  // Connection status
+  final Color connected;
+  final Color disconnected;
+  final Color connecting;
+
+  // Interactive colors
+  final Color hover;
+  final Color pressed;
+  final Color disabled;
   final Color border;
 
-  /// card
-  final Color cardBackground;
-  final Color cardButton;
-  final Color onCardButton;
-  final Color cardActionButton;
-  final Color onCardActionButton;
+  // Divider and outline
+  final Color divider;
+  final Color outline;
 
-  /// primary & secondary
-  final Color primary;
-  final Color onPrimary;
-  final Color secondary;
+  // Accent colors for neon effects
+  final Color neonPurple;
+  final Color neonGreen;
+  final Color neonPink;
+  final Color neonBlue;
 
-  final Color hover;
-  final Color splash;
-  final Color highlight;
-  final Color primaryHover;
-  final Color primarySplash;
-  final Color primaryHighlight;
+  // Gaming-specific colors
+  final Color gamingHighlight;
+  final Color gamingShadow;
+  final Color powerGlow;
+  final Color neonTrail;
+  final Color energyCore;
 
   AppColor copyWith({
-    Color? background,
-    Color? text,
-    Color? hint,
-    Color? border,
-    Color? cardBackground,
-    Color? cardButton,
-    Color? onCardButton,
-    Color? cardActionButton,
-    Color? onCardActionButton,
     Color? primary,
-    Color? onPrimary,
+    Color? primaryVariant,
     Color? secondary,
+    Color? secondaryVariant,
+    Color? background,
+    Color? surface,
+    Color? surfaceVariant,
+    Color? terminalBackground,
+    Color? terminalSurface,
+    Color? terminalBorder,
+    Color? onPrimary,
+    Color? onSecondary,
+    Color? onBackground,
+    Color? onSurface,
+    Color? onSurfaceVariant,
+    Color? terminalText,
+    Color? terminalPrompt,
+    Color? terminalCommand,
+    Color? terminalOutput,
+    Color? success,
+    Color? successVariant,
+    Color? error,
+    Color? errorVariant,
+    Color? warning,
+    Color? info,
+    Color? connected,
+    Color? disconnected,
+    Color? connecting,
     Color? hover,
-    Color? splash,
-    Color? highlight,
-    Color? primaryHover,
-    Color? primarySplash,
-    Color? primaryHighlight,
+    Color? pressed,
+    Color? disabled,
+    Color? border,
+    Color? divider,
+    Color? outline,
+    Color? neonPurple,
+    Color? neonGreen,
+    Color? neonPink,
+    Color? neonBlue,
+    Color? gamingHighlight,
+    Color? gamingShadow,
+    Color? powerGlow,
+    Color? neonTrail,
+    Color? energyCore,
   }) {
     return AppColor(
-      background: background ?? this.background,
-      text: text ?? this.text,
-      hint: hint ?? this.hint,
-      border: border ?? this.border,
-      cardBackground: cardBackground ?? this.cardBackground,
-      cardButton: cardButton ?? this.cardButton,
-      onCardButton: onCardButton ?? this.onCardButton,
-      cardActionButton: cardActionButton ?? this.cardActionButton,
-      onCardActionButton: onCardActionButton ?? this.onCardActionButton,
       primary: primary ?? this.primary,
-      onPrimary: onPrimary ?? this.onPrimary,
+      primaryVariant: primaryVariant ?? this.primaryVariant,
       secondary: secondary ?? this.secondary,
+      secondaryVariant: secondaryVariant ?? this.secondaryVariant,
+      background: background ?? this.background,
+      surface: surface ?? this.surface,
+      surfaceVariant: surfaceVariant ?? this.surfaceVariant,
+      terminalBackground: terminalBackground ?? this.terminalBackground,
+      terminalSurface: terminalSurface ?? this.terminalSurface,
+      terminalBorder: terminalBorder ?? this.terminalBorder,
+      onPrimary: onPrimary ?? this.onPrimary,
+      onSecondary: onSecondary ?? this.onSecondary,
+      onBackground: onBackground ?? this.onBackground,
+      onSurface: onSurface ?? this.onSurface,
+      onSurfaceVariant: onSurfaceVariant ?? this.onSurfaceVariant,
+      terminalText: terminalText ?? this.terminalText,
+      terminalPrompt: terminalPrompt ?? this.terminalPrompt,
+      terminalCommand: terminalCommand ?? this.terminalCommand,
+      terminalOutput: terminalOutput ?? this.terminalOutput,
+      success: success ?? this.success,
+      successVariant: successVariant ?? this.successVariant,
+      error: error ?? this.error,
+      errorVariant: errorVariant ?? this.errorVariant,
+      warning: warning ?? this.warning,
+      info: info ?? this.info,
+      connected: connected ?? this.connected,
+      disconnected: disconnected ?? this.disconnected,
+      connecting: connecting ?? this.connecting,
       hover: hover ?? this.hover,
-      splash: splash ?? this.splash,
-      highlight: highlight ?? this.highlight,
-      primaryHover: primaryHover ?? this.primaryHover,
-      primarySplash: primarySplash ?? this.primarySplash,
-      primaryHighlight: primaryHighlight ?? this.primaryHighlight,
+      pressed: pressed ?? this.pressed,
+      disabled: disabled ?? this.disabled,
+      border: border ?? this.border,
+      divider: divider ?? this.divider,
+      outline: outline ?? this.outline,
+      neonPurple: neonPurple ?? this.neonPurple,
+      neonGreen: neonGreen ?? this.neonGreen,
+      neonPink: neonPink ?? this.neonPink,
+      neonBlue: neonBlue ?? this.neonBlue,
+      gamingHighlight: gamingHighlight ?? this.gamingHighlight,
+      gamingShadow: gamingShadow ?? this.gamingShadow,
+      powerGlow: powerGlow ?? this.powerGlow,
+      neonTrail: neonTrail ?? this.neonTrail,
+      energyCore: energyCore ?? this.energyCore,
     );
   }
 }

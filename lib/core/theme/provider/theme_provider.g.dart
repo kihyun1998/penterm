@@ -1,24 +1,24 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'locale_state_provider.dart';
+part of 'theme_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
 // **************************************************************************
 
-String _$localeStateHash() => r'0767617e9e68c9b3d5078096d87266e0c9383b5d';
+String _$themeHash() => r'6dd970c57295a09cf3c49e8aa1e71da62a1167b0';
 
-/// See also [LocaleState].
-@ProviderFor(LocaleState)
-final localeStateProvider = NotifierProvider<LocaleState, Locale>.internal(
-  LocaleState.new,
-  name: r'localeStateProvider',
+/// See also [Theme].
+@ProviderFor(Theme)
+final themeProvider = NotifierProvider<Theme, AppTheme>.internal(
+  Theme.new,
+  name: r'themeProvider',
   debugGetCreateSourceHash:
-      const bool.fromEnvironment('dart.vm.product') ? null : _$localeStateHash,
+      const bool.fromEnvironment('dart.vm.product') ? null : _$themeHash,
   dependencies: const <ProviderOrFamily>[],
   allTransitiveDependencies: const <ProviderOrFamily>{},
 );
 
-typedef _$LocaleState = Notifier<Locale>;
+typedef _$Theme = Notifier<AppTheme>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

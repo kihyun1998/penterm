@@ -1,6 +1,6 @@
 enum HiveKey {
-  settings('settings'),
-  language('language'),
+  boxSettings('box_settings'),
+  locale('locale'),
   theme('theme'),
   ;
 
