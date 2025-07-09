@@ -34,17 +34,27 @@ penterm/
         │   │   ├── provider/
         │   │   │   └── is_window_maximized_provider.dart
         │   │   └── app_title_bar.dart
-        │   └── app_button.dart
+        │   ├── app_button.dart
+        │   ├── app_icon_button.dart
+        │   └── app_icon_tab.dart
         └── util/
         │   ├── debounce/
         │       ├── debounce_operation.dart
         │       └── debounce_service.dart
         │   └── svg/
+        │       ├── enum/
+        │           └── color_target.dart
         │       ├── model/
         │           └── enum_svg_asset.dart
         │       ├── widget/
         │           └── svg_icon.dart
         │       └── svg_util.dart
+    ├── feature/
+        └── terminal/
+        │   ├── model/
+        │       └── enum_tab_type.dart
+        │   └── provider/
+        │       └── tab_provider.dart
     └── main.dart
 ```
 
@@ -63,7 +73,7 @@ enum DebounceKey {
 ## lib/core/const/enum_hive_key.dart
 ```dart
 enum HiveKey {
-  boxSettings('box_settings'),
+  boxSettings('penterm_box_settings'),
   locale('locale'),
   theme('theme'),
   ;
@@ -1965,45 +1975,230 @@ abstract class LightPalette {
 ```
 ## lib/core/ui/app_button.dart
 ```dart
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 class AppButton extends ConsumerWidget {
-  final Widget child;
-  final VoidCallback? onPressed;
+  final bool isDisabled;
+
+  /// size
+  final double? width;
+  final double? height;
+  final double? borderWidth;
+
+  /// spacing
+  final EdgeInsets? margin;
+  final EdgeInsets? childPadding;
+
+  /// color
   final Color? backgroundColor;
+  final Color? borderColor;
+  final Color? hoverColor;
+
+  /// radius
   final BorderRadius? borderRadius;
-  final EdgeInsets? padding;
+
+  final VoidCallback? onPressed;
+  final Widget child;
 
   const AppButton({
     super.key,
-    required this.child,
-    required this.onPressed,
+    this.isDisabled = false,
+    this.width,
+    this.height,
+    this.borderWidth,
+    this.margin,
+    this.childPadding,
     this.backgroundColor,
+    this.borderColor,
+    this.hoverColor,
     this.borderRadius,
-    this.padding,
+    required this.onPressed,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return MouseRegion(
+      cursor:
+          isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      child: IgnorePointer(
+        ignoring: isDisabled,
+        child: Container(
+          width: width,
+          height: height,
+          margin: margin,
+          decoration: BoxDecoration(
+              color: backgroundColor ?? ref.theme.color.background,
+              borderRadius: borderRadius ?? BorderRadius.circular(8),
+              border: borderColor != null
+                  ? Border.all(width: borderWidth ?? 0, color: borderColor!)
+                  : null),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onPressed,
+              hoverColor: hoverColor ?? ref.theme.color.hover,
+              // splashColor: ref.theme.color.splash,
+              // highlightColor: ref.theme.color.highlight,
+              borderRadius: borderRadius ?? BorderRadius.circular(8),
+              child: Padding(
+                padding: childPadding ?? const EdgeInsets.all(0),
+                child: child,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+```
+## lib/core/ui/app_icon_button.dart
+```dart
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../util/svg/model/enum_svg_asset.dart';
+import '../util/svg/widget/svg_icon.dart';
+import 'app_button.dart';
+
+class AppIconButton extends ConsumerWidget {
+  final bool isDisabled;
+
+  /// size
+  final double? width;
+  final double? height;
+  final double? borderWidth;
+
+  /// spacing
+  final EdgeInsets? margin;
+  final EdgeInsets? childPadding;
+
+  /// color
+  final Color? backgroundColor;
+  final Color? borderColor;
+  final Color? hoverColor;
+
+  /// radius
+  final BorderRadius? borderRadius;
+
+  final VoidCallback? onPressed;
+
+  /// child
+  final SVGAsset icon;
+  final Color? iconColor;
+  final double? iconSize;
+
+  const AppIconButton({
+    super.key,
+    this.isDisabled = false,
+    this.width,
+    this.height,
+    this.borderWidth,
+    this.margin,
+    this.childPadding,
+    this.backgroundColor,
+    this.borderColor,
+    this.hoverColor,
+    this.borderRadius,
+    this.onPressed,
+    required this.icon,
+    this.iconColor,
+    this.iconSize,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppButton(
+      isDisabled: isDisabled,
+
+      /// size
+      width: width,
+      height: height,
+      borderWidth: borderWidth,
+
+      /// spacing
+      margin: margin,
+      childPadding: childPadding,
+
+      /// color
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      hoverColor: hoverColor,
+
+      /// radius
+      borderRadius: borderRadius,
+
+      /// onpressed
+      onPressed: onPressed,
+
+      child: Center(
+        child: SVGIcon(
+          asset: icon,
+          color: iconColor,
+          size: iconSize,
+        ),
+      ),
+    );
+  }
+}
+
+```
+## lib/core/ui/app_icon_tab.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:penterm/core/theme/provider/theme_provider.dart';
+
+import 'app_button.dart';
+
+class AppIconTab extends ConsumerWidget {
+  final String text;
+  final bool isActive;
+  final VoidCallback? onPressed;
+  final EdgeInsets? margin;
+
+  const AppIconTab({
+    super.key,
+    required this.text,
+    required this.isActive,
+    required this.onPressed,
+    this.margin,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      decoration: BoxDecoration(
-        color: backgroundColor ?? ref.theme.color.background,
-        borderRadius: borderRadius ?? BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onPressed,
-          hoverColor: ref.theme.color.hover,
-          // splashColor: ref.theme.color.splash,
-          // highlightColor: ref.theme.color.highlight,
-          borderRadius: borderRadius ?? BorderRadius.circular(8),
-          child: Padding(
-            padding: padding ??
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: child,
+      margin: margin ?? const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      child: AppButton(
+        backgroundColor:
+            isActive ? ref.color.primary.withOpacity(0.15) : Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        // padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        onPressed: onPressed,
+        child: Container(
+          decoration: isActive
+              ? BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: ref.color.primary,
+                      width: 2,
+                    ),
+                  ),
+                )
+              : null,
+          child: Text(
+            text,
+            style: ref.font.semiBoldText12.copyWith(
+              color: isActive
+                  ? ref.color.primary
+                  : ref.color.onBackground.withOpacity(0.7),
+            ),
           ),
         ),
       ),
@@ -2019,9 +2214,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../feature/terminal/model/enum_tab_type.dart';
+import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
-import '../../util/svg/widget/svg_icon.dart';
-import '../app_button.dart';
+import '../app_icon_button.dart';
+import '../app_icon_tab.dart';
 import 'provider/is_window_maximized_provider.dart';
 
 class AppTitleBar extends ConsumerStatefulWidget {
@@ -2067,54 +2264,90 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ build는 WindowListener 이벤트와 무관하게 안정적
+    final activeTab = ref.watch(activeTabProvider);
+
     return Container(
       height: 50,
       color: ref.color.background,
-      child: Row(
+      child: Stack(
         children: [
-          // 🎯 드래그 영역 - 윈도우 최대화와 무관하므로 rebuild 안됨
-          Expanded(child: DragToMoveArea(child: Container())),
+          // 🎯 전체 영역 드래그 가능
+          const Positioned.fill(
+            child: DragToMoveArea(child: SizedBox.expand()),
+          ),
 
-          // 🎯 제어 버튼 영역
+          // 🎯 탭바 + 컨트롤 버튼
           Row(
             children: [
-              AppButton(
-                child: SVGIcon(
-                  asset: SVGAsset.windowMinimize,
-                  color: ref.color.onBackground,
-                  size: 14,
-                ),
-                onPressed: () => windowManager.minimize(),
+              // 🏠 HOME 탭
+              AppIconTab(
+                text: TabType.home.displayName,
+                isActive: activeTab == TabType.home,
+                onPressed: () =>
+                    ref.read(activeTabProvider.notifier).goToHome(),
               ),
-              Consumer(
-                builder: (context, ref, child) {
-                  final isMaximized = ref.watch(isWindowMaximizedProvider);
-                  return AppButton(
-                    child: SVGIcon(
-                      asset: isMaximized
-                          ? SVGAsset.windowRestore
-                          : SVGAsset.windowMaximize,
-                      color: ref.color.onBackground,
-                      size: 14,
-                    ),
-                    onPressed: () {
-                      ref
-                          .read(isWindowMaximizedProvider.notifier)
-                          .toggleMaximize();
-                    },
-                  );
-                },
-              ),
-              AppButton(
-                child: SVGIcon(
-                  asset: SVGAsset.windowClose,
-                  color: ref.color.onBackground,
-                  size: 18,
-                ),
-                onPressed: () => windowManager.close(),
-              ),
+
               const SizedBox(width: 4),
+
+              // 📁 SFTP 탭
+              AppIconTab(
+                text: TabType.sftp.displayName,
+                isActive: activeTab == TabType.sftp,
+                onPressed: () =>
+                    ref.read(activeTabProvider.notifier).goToSftp(),
+              ),
+
+              // 🌌 중간 빈 공간
+              const Spacer(),
+
+              // 🎯 제어 버튼 영역
+              Row(
+                children: [
+                  AppIconButton(
+                    width: 30,
+                    height: 30,
+
+                    /// icon
+                    icon: SVGAsset.windowMinimize,
+                    iconColor: ref.color.onBackground,
+                    iconSize: 2,
+                    onPressed: () => windowManager.minimize(),
+                  ),
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final isMaximized = ref.watch(isWindowMaximizedProvider);
+                      return AppIconButton(
+                        width: 30,
+                        height: 30,
+                        margin: const EdgeInsets.symmetric(horizontal: 5),
+
+                        /// icon
+                        icon: isMaximized
+                            ? SVGAsset.windowRestore
+                            : SVGAsset.windowMaximize,
+                        iconColor: ref.color.onBackground,
+                        iconSize: 14,
+                        onPressed: () {
+                          ref
+                              .read(isWindowMaximizedProvider.notifier)
+                              .toggleMaximize();
+                        },
+                      );
+                    },
+                  ),
+                  AppIconButton(
+                    width: 30,
+                    height: 30,
+
+                    /// icon
+                    icon: SVGAsset.windowClose,
+                    iconColor: ref.color.onBackground,
+                    iconSize: 14,
+                    onPressed: () => windowManager.close(),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+              ),
             ],
           ),
         ],
@@ -2361,6 +2594,16 @@ class DebounceService {
 }
 
 ```
+## lib/core/util/svg/enum/color_target.dart
+```dart
+enum ColorTarget {
+  auto, // 기존 스타일에 따라 자동 결정
+  fill, // fill만 적용
+  stroke, // stroke만 적용
+  both, // fill과 stroke 둘 다 적용
+}
+
+```
 ## lib/core/util/svg/model/enum_svg_asset.dart
 ```dart
 enum SVGAsset {
@@ -2382,6 +2625,7 @@ enum SVGAsset {
 ```dart
 import 'package:flutter/services.dart';
 
+import 'enum/color_target.dart';
 import 'model/enum_svg_asset.dart';
 
 class SVGUtil {
@@ -2410,6 +2654,7 @@ class SVGUtil {
     Color? svgColor,
     double? svgSize,
     bool isCustom = false,
+    ColorTarget colorTarget = ColorTarget.auto,
   }) async {
     try {
       // 1. 캐시 키 생성
@@ -2432,7 +2677,11 @@ class SVGUtil {
       // 5. 색상 적용
       if (svgColor != null) {
         svgString = _applyColor(
-            svgString: svgString, color: svgColor, isCustom: isCustom);
+          svgString: svgString,
+          color: svgColor,
+          isCustom: isCustom,
+          target: colorTarget,
+        );
       }
 
       // 6. 결과 캐싱
@@ -2455,6 +2704,7 @@ class SVGUtil {
     required String svgString,
     required Color color,
     bool isCustom = false,
+    ColorTarget target = ColorTarget.auto,
   }) {
     final colorHex = _colorToHex(color);
 
@@ -2463,43 +2713,92 @@ class SVGUtil {
       (match) {
         String tag = match.group(0)!;
 
-        // Fill 처리
-        if (isCustom) {
-          if (_fillCustomRegex.hasMatch(tag)) {
-            // 기존 fill 교체 (custom)
-            tag = tag.replaceAllMapped(
-                _fillCustomRegex, (match) => 'fill="$colorHex"');
-          } else if (!tag.contains('fill=')) {
-            // fill 속성이 없으면 추가
-            tag = _addAttribute(tag, 'fill', colorHex);
-          }
-        } else {
-          if (_fillRegex.hasMatch(tag)) {
-            // 기존 fill 교체 (일반)
-            tag =
-                tag.replaceAllMapped(_fillRegex, (match) => 'fill="$colorHex"');
-          } else if (!tag.contains('fill=')) {
-            // fill 속성이 없으면 추가
-            tag = _addAttribute(tag, 'fill', colorHex);
-          }
-        }
+        switch (target) {
+          case ColorTarget.fill:
+            tag = _applyFillOnly(tag, colorHex, isCustom);
+            break;
 
-        // Stroke 처리
-        if (isCustom) {
-          if (_strokeCustomRegex.hasMatch(tag)) {
-            tag = tag.replaceAllMapped(
-                _strokeCustomRegex, (match) => 'stroke="$colorHex"');
-          }
-        } else {
-          if (_strokeRegex.hasMatch(tag)) {
-            tag = tag.replaceAllMapped(
-                _strokeRegex, (match) => 'stroke="$colorHex"');
-          }
+          case ColorTarget.stroke:
+            tag = _applyStrokeOnly(tag, colorHex, isCustom);
+            break;
+
+          case ColorTarget.both:
+            tag = _applyBoth(tag, colorHex, isCustom);
+            break;
+
+          case ColorTarget.auto:
+            tag = _applyAuto(tag, colorHex, isCustom);
+            break;
         }
 
         return tag;
       },
     );
+  }
+
+// 각각의 적용 메서드들
+  String _applyAuto(String tag, String colorHex, bool isCustom) {
+    bool hasFill =
+        isCustom ? _fillCustomRegex.hasMatch(tag) : _fillRegex.hasMatch(tag);
+    bool hasStroke = isCustom
+        ? _strokeCustomRegex.hasMatch(tag)
+        : _strokeRegex.hasMatch(tag);
+
+    if (hasFill) {
+      // 기존 fill이 있으면 fill 변경
+      return _applyFillOnly(tag, colorHex, isCustom);
+    } else if (hasStroke) {
+      // fill이 없고 stroke가 있으면 stroke 변경
+      return _applyStrokeOnly(tag, colorHex, isCustom);
+    } else {
+      // 둘 다 없으면 fill 추가 (기본값)
+      return _applyFillOnly(tag, colorHex, isCustom);
+    }
+  }
+
+  String _applyFillOnly(String tag, String colorHex, bool isCustom) {
+    if (isCustom) {
+      if (_fillCustomRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(
+            _fillCustomRegex, (match) => 'fill="$colorHex"');
+      } else if (!tag.contains('fill=')) {
+        return _addAttribute(tag, 'fill', colorHex);
+      }
+    } else {
+      if (_fillRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(_fillRegex, (match) => 'fill="$colorHex"');
+      } else if (!tag.contains('fill=')) {
+        return _addAttribute(tag, 'fill', colorHex);
+      }
+    }
+    return tag;
+  }
+
+  String _applyStrokeOnly(String tag, String colorHex, bool isCustom) {
+    if (isCustom) {
+      if (_strokeCustomRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(
+            _strokeCustomRegex, (match) => 'stroke="$colorHex"');
+      } else if (!tag.contains('stroke=')) {
+        return _addAttribute(tag, 'stroke', colorHex);
+      }
+    } else {
+      if (_strokeRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(
+            _strokeRegex, (match) => 'stroke="$colorHex"');
+      } else if (!tag.contains('stroke=')) {
+        return _addAttribute(tag, 'stroke', colorHex);
+      }
+    }
+    return tag;
+  }
+
+  String _applyBoth(String tag, String colorHex, bool isCustom) {
+    // fill 먼저 적용
+    tag = _applyFillOnly(tag, colorHex, isCustom);
+    // stroke 적용
+    tag = _applyStrokeOnly(tag, colorHex, isCustom);
+    return tag;
   }
 
   /// 태그에 속성을 추가하는 헬퍼 메서드
@@ -2583,6 +2882,86 @@ class SVGIcon extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+```
+## lib/feature/terminal/model/enum_tab_type.dart
+```dart
+enum TabType {
+  home('home'),
+  sftp('sftp');
+
+  const TabType(this.value);
+
+  final String value;
+
+  /// 탭 이름 (다국어 지원 시 여기서 처리)
+  String get displayName {
+    switch (this) {
+      case TabType.home:
+        return 'HOME';
+      case TabType.sftp:
+        return 'SFTP';
+    }
+  }
+
+  /// 탭 아이콘 (추후 SVG 아이콘 추가 시 사용)
+  String get iconName {
+    switch (this) {
+      case TabType.home:
+        return 'home';
+      case TabType.sftp:
+        return 'folder';
+    }
+  }
+
+  /// JSON 직렬화
+  String toJson() => value;
+
+  /// JSON 역직렬화
+  static TabType fromJson(String json) {
+    return TabType.values.firstWhere(
+      (type) => type.value == json,
+      orElse: () => TabType.home,
+    );
+  }
+}
+
+```
+## lib/feature/terminal/provider/tab_provider.dart
+```dart
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../model/enum_tab_type.dart';
+
+part 'tab_provider.g.dart';
+
+@riverpod
+class ActiveTab extends _$ActiveTab {
+  @override
+  TabType build() {
+    return TabType.home; // 기본값: Home 탭
+  }
+
+  /// 특정 탭으로 전환
+  void setTab(TabType tabType) {
+    state = tabType;
+  }
+
+  /// Home 탭으로 전환
+  void goToHome() {
+    state = TabType.home;
+  }
+
+  /// SFTP 탭으로 전환
+  void goToSftp() {
+    state = TabType.sftp;
+  }
+
+  /// 탭 토글 (Home ↔ SFTP)
+  void toggleTab() {
+    state = state == TabType.home ? TabType.sftp : TabType.home;
   }
 }
 

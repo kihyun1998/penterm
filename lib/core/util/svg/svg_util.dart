@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 
+import 'enum/color_target.dart';
 import 'model/enum_svg_asset.dart';
 
 class SVGUtil {
@@ -28,6 +29,7 @@ class SVGUtil {
     Color? svgColor,
     double? svgSize,
     bool isCustom = false,
+    ColorTarget colorTarget = ColorTarget.auto,
   }) async {
     try {
       // 1. 캐시 키 생성
@@ -50,7 +52,11 @@ class SVGUtil {
       // 5. 색상 적용
       if (svgColor != null) {
         svgString = _applyColor(
-            svgString: svgString, color: svgColor, isCustom: isCustom);
+          svgString: svgString,
+          color: svgColor,
+          isCustom: isCustom,
+          target: colorTarget,
+        );
       }
 
       // 6. 결과 캐싱
@@ -73,6 +79,7 @@ class SVGUtil {
     required String svgString,
     required Color color,
     bool isCustom = false,
+    ColorTarget target = ColorTarget.auto,
   }) {
     final colorHex = _colorToHex(color);
 
@@ -81,43 +88,92 @@ class SVGUtil {
       (match) {
         String tag = match.group(0)!;
 
-        // Fill 처리
-        if (isCustom) {
-          if (_fillCustomRegex.hasMatch(tag)) {
-            // 기존 fill 교체 (custom)
-            tag = tag.replaceAllMapped(
-                _fillCustomRegex, (match) => 'fill="$colorHex"');
-          } else if (!tag.contains('fill=')) {
-            // fill 속성이 없으면 추가
-            tag = _addAttribute(tag, 'fill', colorHex);
-          }
-        } else {
-          if (_fillRegex.hasMatch(tag)) {
-            // 기존 fill 교체 (일반)
-            tag =
-                tag.replaceAllMapped(_fillRegex, (match) => 'fill="$colorHex"');
-          } else if (!tag.contains('fill=')) {
-            // fill 속성이 없으면 추가
-            tag = _addAttribute(tag, 'fill', colorHex);
-          }
-        }
+        switch (target) {
+          case ColorTarget.fill:
+            tag = _applyFillOnly(tag, colorHex, isCustom);
+            break;
 
-        // Stroke 처리
-        if (isCustom) {
-          if (_strokeCustomRegex.hasMatch(tag)) {
-            tag = tag.replaceAllMapped(
-                _strokeCustomRegex, (match) => 'stroke="$colorHex"');
-          }
-        } else {
-          if (_strokeRegex.hasMatch(tag)) {
-            tag = tag.replaceAllMapped(
-                _strokeRegex, (match) => 'stroke="$colorHex"');
-          }
+          case ColorTarget.stroke:
+            tag = _applyStrokeOnly(tag, colorHex, isCustom);
+            break;
+
+          case ColorTarget.both:
+            tag = _applyBoth(tag, colorHex, isCustom);
+            break;
+
+          case ColorTarget.auto:
+            tag = _applyAuto(tag, colorHex, isCustom);
+            break;
         }
 
         return tag;
       },
     );
+  }
+
+// 각각의 적용 메서드들
+  String _applyAuto(String tag, String colorHex, bool isCustom) {
+    bool hasFill =
+        isCustom ? _fillCustomRegex.hasMatch(tag) : _fillRegex.hasMatch(tag);
+    bool hasStroke = isCustom
+        ? _strokeCustomRegex.hasMatch(tag)
+        : _strokeRegex.hasMatch(tag);
+
+    if (hasFill) {
+      // 기존 fill이 있으면 fill 변경
+      return _applyFillOnly(tag, colorHex, isCustom);
+    } else if (hasStroke) {
+      // fill이 없고 stroke가 있으면 stroke 변경
+      return _applyStrokeOnly(tag, colorHex, isCustom);
+    } else {
+      // 둘 다 없으면 fill 추가 (기본값)
+      return _applyFillOnly(tag, colorHex, isCustom);
+    }
+  }
+
+  String _applyFillOnly(String tag, String colorHex, bool isCustom) {
+    if (isCustom) {
+      if (_fillCustomRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(
+            _fillCustomRegex, (match) => 'fill="$colorHex"');
+      } else if (!tag.contains('fill=')) {
+        return _addAttribute(tag, 'fill', colorHex);
+      }
+    } else {
+      if (_fillRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(_fillRegex, (match) => 'fill="$colorHex"');
+      } else if (!tag.contains('fill=')) {
+        return _addAttribute(tag, 'fill', colorHex);
+      }
+    }
+    return tag;
+  }
+
+  String _applyStrokeOnly(String tag, String colorHex, bool isCustom) {
+    if (isCustom) {
+      if (_strokeCustomRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(
+            _strokeCustomRegex, (match) => 'stroke="$colorHex"');
+      } else if (!tag.contains('stroke=')) {
+        return _addAttribute(tag, 'stroke', colorHex);
+      }
+    } else {
+      if (_strokeRegex.hasMatch(tag)) {
+        return tag.replaceAllMapped(
+            _strokeRegex, (match) => 'stroke="$colorHex"');
+      } else if (!tag.contains('stroke=')) {
+        return _addAttribute(tag, 'stroke', colorHex);
+      }
+    }
+    return tag;
+  }
+
+  String _applyBoth(String tag, String colorHex, bool isCustom) {
+    // fill 먼저 적용
+    tag = _applyFillOnly(tag, colorHex, isCustom);
+    // stroke 적용
+    tag = _applyStrokeOnly(tag, colorHex, isCustom);
+    return tag;
   }
 
   /// 태그에 속성을 추가하는 헬퍼 메서드

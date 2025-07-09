@@ -1,5 +1,5 @@
 enum HiveKey {
-  boxSettings('box_settings'),
+  boxSettings('penterm_box_settings'),
   locale('locale'),
   theme('theme'),
   ;

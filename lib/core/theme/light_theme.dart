@@ -16,6 +16,9 @@ class LightTheme implements AppTheme {
     _color = const AppColor(
       primary: LightPalette.primary,
       primaryVariant: LightPalette.primaryVariant,
+      primaryHover: LightPalette.primaryHover,
+      primarySplash: LightPalette.primarySplash,
+      primaryHighlight: LightPalette.primaryHighlight,
       secondary: LightPalette.secondary,
       secondaryVariant: LightPalette.secondaryVariant,
       background: LightPalette.background,
@@ -43,6 +46,8 @@ class LightTheme implements AppTheme {
       disconnected: LightPalette.disconnected,
       connecting: LightPalette.connecting,
       hover: LightPalette.hover,
+      splash: LightPalette.splash,
+      highlight: LightPalette.highlight,
       pressed: LightPalette.pressed,
       disabled: LightPalette.disabled,
       border: LightPalette.border,

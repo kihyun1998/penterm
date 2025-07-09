@@ -6,6 +6,9 @@ class AppColor {
     // Primary colors
     required this.primary,
     required this.primaryVariant,
+    required this.primaryHover,
+    required this.primarySplash,
+    required this.primaryHighlight,
     required this.secondary,
     required this.secondaryVariant,
 
@@ -47,6 +50,8 @@ class AppColor {
 
     // Interactive colors
     required this.hover,
+    required this.splash,
+    required this.highlight,
     required this.pressed,
     required this.disabled,
     required this.border,
@@ -72,6 +77,10 @@ class AppColor {
   // Primary colors
   final Color primary;
   final Color primaryVariant;
+  final Color primaryHover;
+  final Color primarySplash;
+  final Color primaryHighlight;
+
   final Color secondary;
   final Color secondaryVariant;
 
@@ -113,6 +122,8 @@ class AppColor {
 
   // Interactive colors
   final Color hover;
+  final Color splash;
+  final Color highlight;
   final Color pressed;
   final Color disabled;
   final Color border;
@@ -137,6 +148,9 @@ class AppColor {
   AppColor copyWith({
     Color? primary,
     Color? primaryVariant,
+    Color? primaryHover,
+    Color? primarySplash,
+    Color? primaryHighlight,
     Color? secondary,
     Color? secondaryVariant,
     Color? background,
@@ -164,6 +178,8 @@ class AppColor {
     Color? disconnected,
     Color? connecting,
     Color? hover,
+    Color? splash,
+    Color? highlight,
     Color? pressed,
     Color? disabled,
     Color? border,
@@ -182,6 +198,9 @@ class AppColor {
     return AppColor(
       primary: primary ?? this.primary,
       primaryVariant: primaryVariant ?? this.primaryVariant,
+      primaryHover: primaryHover ?? this.primaryHover,
+      primarySplash: primarySplash ?? this.primarySplash,
+      primaryHighlight: primaryHighlight ?? this.primaryHighlight,
       secondary: secondary ?? this.secondary,
       secondaryVariant: secondaryVariant ?? this.secondaryVariant,
       background: background ?? this.background,
@@ -209,6 +228,8 @@ class AppColor {
       disconnected: disconnected ?? this.disconnected,
       connecting: connecting ?? this.connecting,
       hover: hover ?? this.hover,
+      splash: splash ?? this.splash,
+      highlight: highlight ?? this.highlight,
       pressed: pressed ?? this.pressed,
       disabled: disabled ?? this.disabled,
       border: border ?? this.border,

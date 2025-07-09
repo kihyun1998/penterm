@@ -16,6 +16,9 @@ class DarkTheme implements AppTheme {
     _color = const AppColor(
       primary: DarkPalette.primary,
       primaryVariant: DarkPalette.primaryVariant,
+      primaryHover: DarkPalette.primaryHover,
+      primarySplash: DarkPalette.primarySplash,
+      primaryHighlight: DarkPalette.primaryHighlight,
       secondary: DarkPalette.secondary,
       secondaryVariant: DarkPalette.secondaryVariant,
       background: DarkPalette.background,
@@ -43,6 +46,8 @@ class DarkTheme implements AppTheme {
       disconnected: DarkPalette.disconnected,
       connecting: DarkPalette.connecting,
       hover: DarkPalette.hover,
+      splash: DarkPalette.splash,
+      highlight: DarkPalette.highlight,
       pressed: DarkPalette.pressed,
       disabled: DarkPalette.disabled,
       border: DarkPalette.border,

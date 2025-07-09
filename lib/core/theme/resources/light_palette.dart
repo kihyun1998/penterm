@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
 abstract class LightPalette {
-  // Primary colors - Neon/Gaming Theme
+// Primary colors - Neon/Gaming Theme
   static const Color primary = Color(0xFF8B5CF6); // Violet-500
   static const Color primaryVariant = Color(0xFF7C3AED); // Violet-600
+  static const Color primaryHover =
+      Color(0x1A8B5CF6); // Violet-500 with 10% opacity
+  static const Color primarySplash =
+      Color(0x338B5CF6); // Violet-500 with 20% opacity
+  static const Color primaryHighlight =
+      Color(0x1A8B5CF6); // Violet-500 with 10% opacity
   static const Color secondary = Color(0xFF10B981); // Emerald-500
   static const Color secondaryVariant = Color(0xFF059669); // Emerald-600
 
@@ -44,7 +50,9 @@ abstract class LightPalette {
   static const Color connecting = Color(0xFFF59E0B); // Yellow-500
 
   // Interactive colors - Gaming Style
-  static const Color hover = Color(0xFFE2E8F0); // 쿨톤 hover
+  static const Color hover = Color(0x0D000000); // Black 5% opacity
+  static const Color splash = Color(0x1A000000); // Black 10% opacity
+  static const Color highlight = Color(0x14000000); // Black 8% opacity
   static const Color pressed = Color(0xFFCBD5E1); // 쿨톤 pressed
   static const Color disabled = Color(0xFF94A3B8); // 슬레이트 400
   static const Color border = Color(0xFFCBD5E1); // 슬레이트 300
