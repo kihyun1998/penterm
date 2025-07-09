@@ -2,80 +2,9 @@
 part of 'app_theme.dart';
 
 class AppColor {
-  const AppColor({
-    // Primary colors
-    required this.primary,
-    required this.primaryVariant,
-    required this.primaryHover,
-    required this.primarySplash,
-    required this.primaryHighlight,
-    required this.secondary,
-    required this.secondaryVariant,
-
-    // Background colors
-    required this.background,
-    required this.surface,
-    required this.surfaceVariant,
-
-    // Terminal specific colors
-    required this.terminalBackground,
-    required this.terminalSurface,
-    required this.terminalBorder,
-
-    // Text colors
-    required this.onPrimary,
-    required this.onSecondary,
-    required this.onBackground,
-    required this.onSurface,
-    required this.onSurfaceVariant,
-
-    // Terminal text colors
-    required this.terminalText,
-    required this.terminalPrompt,
-    required this.terminalCommand,
-    required this.terminalOutput,
-
-    // Status colors
-    required this.success,
-    required this.successVariant,
-    required this.error,
-    required this.errorVariant,
-    required this.warning,
-    required this.info,
-
-    // Connection status
-    required this.connected,
-    required this.disconnected,
-    required this.connecting,
-
-    // Interactive colors
-    required this.hover,
-    required this.splash,
-    required this.highlight,
-    required this.pressed,
-    required this.disabled,
-    required this.border,
-
-    // Divider and outline
-    required this.divider,
-    required this.outline,
-
-    // Accent colors for neon effects
-    required this.neonPurple,
-    required this.neonGreen,
-    required this.neonPink,
-    required this.neonBlue,
-
-    // Gaming-specific colors
-    required this.gamingHighlight,
-    required this.gamingShadow,
-    required this.powerGlow,
-    required this.neonTrail,
-    required this.energyCore,
-  });
-
   // Primary colors
   final Color primary;
+  final Color primarySoft;
   final Color primaryVariant;
   final Color primaryHover;
   final Color primarySplash;
@@ -88,6 +17,7 @@ class AppColor {
   final Color background;
   final Color surface;
   final Color surfaceVariant;
+  final Color surfaceVariantSoft;
 
   // Terminal specific colors
   final Color terminalBackground;
@@ -98,6 +28,7 @@ class AppColor {
   final Color onPrimary;
   final Color onSecondary;
   final Color onBackground;
+  final Color onBackgroundSoft;
   final Color onSurface;
   final Color onSurfaceVariant;
 
@@ -145,8 +76,63 @@ class AppColor {
   final Color neonTrail;
   final Color energyCore;
 
+  const AppColor({
+    required this.primary,
+    required this.primarySoft,
+    required this.primaryVariant,
+    required this.primaryHover,
+    required this.primarySplash,
+    required this.primaryHighlight,
+    required this.secondary,
+    required this.secondaryVariant,
+    required this.background,
+    required this.surface,
+    required this.surfaceVariant,
+    required this.surfaceVariantSoft,
+    required this.terminalBackground,
+    required this.terminalSurface,
+    required this.terminalBorder,
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.onBackground,
+    required this.onBackgroundSoft,
+    required this.onSurface,
+    required this.onSurfaceVariant,
+    required this.terminalText,
+    required this.terminalPrompt,
+    required this.terminalCommand,
+    required this.terminalOutput,
+    required this.success,
+    required this.successVariant,
+    required this.error,
+    required this.errorVariant,
+    required this.warning,
+    required this.info,
+    required this.connected,
+    required this.disconnected,
+    required this.connecting,
+    required this.hover,
+    required this.splash,
+    required this.highlight,
+    required this.pressed,
+    required this.disabled,
+    required this.border,
+    required this.divider,
+    required this.outline,
+    required this.neonPurple,
+    required this.neonGreen,
+    required this.neonPink,
+    required this.neonBlue,
+    required this.gamingHighlight,
+    required this.gamingShadow,
+    required this.powerGlow,
+    required this.neonTrail,
+    required this.energyCore,
+  });
+
   AppColor copyWith({
     Color? primary,
+    Color? primarySoft,
     Color? primaryVariant,
     Color? primaryHover,
     Color? primarySplash,
@@ -156,12 +142,14 @@ class AppColor {
     Color? background,
     Color? surface,
     Color? surfaceVariant,
+    Color? surfaceVariantSoft,
     Color? terminalBackground,
     Color? terminalSurface,
     Color? terminalBorder,
     Color? onPrimary,
     Color? onSecondary,
     Color? onBackground,
+    Color? onBackgroundSoft,
     Color? onSurface,
     Color? onSurfaceVariant,
     Color? terminalText,
@@ -197,6 +185,7 @@ class AppColor {
   }) {
     return AppColor(
       primary: primary ?? this.primary,
+      primarySoft: primarySoft ?? this.primarySoft,
       primaryVariant: primaryVariant ?? this.primaryVariant,
       primaryHover: primaryHover ?? this.primaryHover,
       primarySplash: primarySplash ?? this.primarySplash,
@@ -206,12 +195,14 @@ class AppColor {
       background: background ?? this.background,
       surface: surface ?? this.surface,
       surfaceVariant: surfaceVariant ?? this.surfaceVariant,
+      surfaceVariantSoft: surfaceVariantSoft ?? this.surfaceVariantSoft,
       terminalBackground: terminalBackground ?? this.terminalBackground,
       terminalSurface: terminalSurface ?? this.terminalSurface,
       terminalBorder: terminalBorder ?? this.terminalBorder,
       onPrimary: onPrimary ?? this.onPrimary,
       onSecondary: onSecondary ?? this.onSecondary,
       onBackground: onBackground ?? this.onBackground,
+      onBackgroundSoft: onBackgroundSoft ?? this.onBackgroundSoft,
       onSurface: onSurface ?? this.onSurface,
       onSurfaceVariant: onSurfaceVariant ?? this.onSurfaceVariant,
       terminalText: terminalText ?? this.terminalText,

@@ -15,6 +15,7 @@ class LightTheme implements AppTheme {
   LightTheme._internal() {
     _color = const AppColor(
       primary: LightPalette.primary,
+      primarySoft: LightPalette.primarySoft,
       primaryVariant: LightPalette.primaryVariant,
       primaryHover: LightPalette.primaryHover,
       primarySplash: LightPalette.primarySplash,
@@ -24,12 +25,14 @@ class LightTheme implements AppTheme {
       background: LightPalette.background,
       surface: LightPalette.surface,
       surfaceVariant: LightPalette.surfaceVariant,
+      surfaceVariantSoft: LightPalette.surfaceVariantSoft,
       terminalBackground: LightPalette.terminalBackground,
       terminalSurface: LightPalette.terminalSurface,
       terminalBorder: LightPalette.terminalBorder,
       onPrimary: LightPalette.onPrimary,
       onSecondary: LightPalette.onSecondary,
       onBackground: LightPalette.onBackground,
+      onBackgroundSoft: LightPalette.onBackgroundSoft,
       onSurface: LightPalette.onSurface,
       onSurfaceVariant: LightPalette.onSurfaceVariant,
       terminalText: LightPalette.terminalText,

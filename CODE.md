@@ -266,6 +266,9 @@ class DarkTheme implements AppTheme {
     _color = const AppColor(
       primary: DarkPalette.primary,
       primaryVariant: DarkPalette.primaryVariant,
+      primaryHover: DarkPalette.primaryHover,
+      primarySplash: DarkPalette.primarySplash,
+      primaryHighlight: DarkPalette.primaryHighlight,
       secondary: DarkPalette.secondary,
       secondaryVariant: DarkPalette.secondaryVariant,
       background: DarkPalette.background,
@@ -293,6 +296,8 @@ class DarkTheme implements AppTheme {
       disconnected: DarkPalette.disconnected,
       connecting: DarkPalette.connecting,
       hover: DarkPalette.hover,
+      splash: DarkPalette.splash,
+      highlight: DarkPalette.highlight,
       pressed: DarkPalette.pressed,
       disabled: DarkPalette.disabled,
       border: DarkPalette.border,
@@ -344,6 +349,9 @@ class AppColor {
     // Primary colors
     required this.primary,
     required this.primaryVariant,
+    required this.primaryHover,
+    required this.primarySplash,
+    required this.primaryHighlight,
     required this.secondary,
     required this.secondaryVariant,
 
@@ -385,6 +393,8 @@ class AppColor {
 
     // Interactive colors
     required this.hover,
+    required this.splash,
+    required this.highlight,
     required this.pressed,
     required this.disabled,
     required this.border,
@@ -410,6 +420,10 @@ class AppColor {
   // Primary colors
   final Color primary;
   final Color primaryVariant;
+  final Color primaryHover;
+  final Color primarySplash;
+  final Color primaryHighlight;
+
   final Color secondary;
   final Color secondaryVariant;
 
@@ -451,6 +465,8 @@ class AppColor {
 
   // Interactive colors
   final Color hover;
+  final Color splash;
+  final Color highlight;
   final Color pressed;
   final Color disabled;
   final Color border;
@@ -475,6 +491,9 @@ class AppColor {
   AppColor copyWith({
     Color? primary,
     Color? primaryVariant,
+    Color? primaryHover,
+    Color? primarySplash,
+    Color? primaryHighlight,
     Color? secondary,
     Color? secondaryVariant,
     Color? background,
@@ -502,6 +521,8 @@ class AppColor {
     Color? disconnected,
     Color? connecting,
     Color? hover,
+    Color? splash,
+    Color? highlight,
     Color? pressed,
     Color? disabled,
     Color? border,
@@ -520,6 +541,9 @@ class AppColor {
     return AppColor(
       primary: primary ?? this.primary,
       primaryVariant: primaryVariant ?? this.primaryVariant,
+      primaryHover: primaryHover ?? this.primaryHover,
+      primarySplash: primarySplash ?? this.primarySplash,
+      primaryHighlight: primaryHighlight ?? this.primaryHighlight,
       secondary: secondary ?? this.secondary,
       secondaryVariant: secondaryVariant ?? this.secondaryVariant,
       background: background ?? this.background,
@@ -547,6 +571,8 @@ class AppColor {
       disconnected: disconnected ?? this.disconnected,
       connecting: connecting ?? this.connecting,
       hover: hover ?? this.hover,
+      splash: splash ?? this.splash,
+      highlight: highlight ?? this.highlight,
       pressed: pressed ?? this.pressed,
       disabled: disabled ?? this.disabled,
       border: border ?? this.border,
@@ -1498,6 +1524,9 @@ class LightTheme implements AppTheme {
     _color = const AppColor(
       primary: LightPalette.primary,
       primaryVariant: LightPalette.primaryVariant,
+      primaryHover: LightPalette.primaryHover,
+      primarySplash: LightPalette.primarySplash,
+      primaryHighlight: LightPalette.primaryHighlight,
       secondary: LightPalette.secondary,
       secondaryVariant: LightPalette.secondaryVariant,
       background: LightPalette.background,
@@ -1525,6 +1554,8 @@ class LightTheme implements AppTheme {
       disconnected: LightPalette.disconnected,
       connecting: LightPalette.connecting,
       hover: LightPalette.hover,
+      splash: LightPalette.splash,
+      highlight: LightPalette.highlight,
       pressed: LightPalette.pressed,
       disabled: LightPalette.disabled,
       border: LightPalette.border,
@@ -1695,9 +1726,15 @@ extension ThemeProviderExt on WidgetRef {
 import 'package:flutter/material.dart';
 
 abstract class DarkPalette {
-  // Primary colors - Neon/Gaming Theme
+// Primary colors - Neon/Gaming Theme
   static const Color primary = Color(0xFF8B5CF6); // Violet-500
   static const Color primaryVariant = Color(0xFF7C3AED); // Violet-600
+  static const Color primaryHover =
+      Color(0x1A8B5CF6); // Violet-500 with 10% opacity
+  static const Color primarySplash =
+      Color(0x338B5CF6); // Violet-500 with 20% opacity
+  static const Color primaryHighlight =
+      Color(0x1A8B5CF6); // Violet-500 with 10% opacity
   static const Color secondary = Color(0xFF10B981); // Emerald-500
   static const Color secondaryVariant = Color(0xFF059669); // Emerald-600
 
@@ -1738,7 +1775,9 @@ abstract class DarkPalette {
   static const Color connecting = Color(0xFFFBBF24); // Yellow-400
 
   // Interactive colors
-  static const Color hover = Color(0xFF374151); // Gray-700
+  static const Color hover = Color(0x0DFFFFFF); // White 5% opacity
+  static const Color splash = Color(0x1AFFFFFF); // White 10% opacity
+  static const Color highlight = Color(0x14FFFFFF); // White 8% opacity
   static const Color pressed = Color(0xFF4B5563); // Gray-600
   static const Color disabled = Color(0xFF6B7280); // Gray-500
   static const Color border = Color(0xFF4B5563); // Gray-600
@@ -1893,9 +1932,15 @@ class SpaceMono implements Font {
 import 'package:flutter/material.dart';
 
 abstract class LightPalette {
-  // Primary colors - Neon/Gaming Theme
+// Primary colors - Neon/Gaming Theme
   static const Color primary = Color(0xFF8B5CF6); // Violet-500
   static const Color primaryVariant = Color(0xFF7C3AED); // Violet-600
+  static const Color primaryHover =
+      Color(0x1A8B5CF6); // Violet-500 with 10% opacity
+  static const Color primarySplash =
+      Color(0x338B5CF6); // Violet-500 with 20% opacity
+  static const Color primaryHighlight =
+      Color(0x1A8B5CF6); // Violet-500 with 10% opacity
   static const Color secondary = Color(0xFF10B981); // Emerald-500
   static const Color secondaryVariant = Color(0xFF059669); // Emerald-600
 
@@ -1936,7 +1981,9 @@ abstract class LightPalette {
   static const Color connecting = Color(0xFFF59E0B); // Yellow-500
 
   // Interactive colors - Gaming Style
-  static const Color hover = Color(0xFFE2E8F0); // 쿨톤 hover
+  static const Color hover = Color(0x0D000000); // Black 5% opacity
+  static const Color splash = Color(0x1A000000); // Black 10% opacity
+  static const Color highlight = Color(0x14000000); // Black 8% opacity
   static const Color pressed = Color(0xFFCBD5E1); // 쿨톤 pressed
   static const Color disabled = Color(0xFF94A3B8); // 슬레이트 400
   static const Color border = Color(0xFFCBD5E1); // 슬레이트 300
@@ -1996,6 +2043,8 @@ class AppButton extends ConsumerWidget {
   final Color? backgroundColor;
   final Color? borderColor;
   final Color? hoverColor;
+  final Color? splashColor;
+  final Color? highlightColor;
 
   /// radius
   final BorderRadius? borderRadius;
@@ -2014,6 +2063,8 @@ class AppButton extends ConsumerWidget {
     this.backgroundColor,
     this.borderColor,
     this.hoverColor,
+    this.splashColor,
+    this.highlightColor,
     this.borderRadius,
     required this.onPressed,
     required this.child,
@@ -2041,8 +2092,8 @@ class AppButton extends ConsumerWidget {
             child: InkWell(
               onTap: onPressed,
               hoverColor: hoverColor ?? ref.theme.color.hover,
-              // splashColor: ref.theme.color.splash,
-              // highlightColor: ref.theme.color.highlight,
+              splashColor: splashColor ?? ref.theme.color.splash,
+              highlightColor: highlightColor ?? ref.theme.color.highlight,
               borderRadius: borderRadius ?? BorderRadius.circular(8),
               child: Padding(
                 padding: childPadding ?? const EdgeInsets.all(0),
@@ -2083,6 +2134,8 @@ class AppIconButton extends ConsumerWidget {
   final Color? backgroundColor;
   final Color? borderColor;
   final Color? hoverColor;
+  final Color? splashColor;
+  final Color? highlightColor;
 
   /// radius
   final BorderRadius? borderRadius;
@@ -2105,6 +2158,8 @@ class AppIconButton extends ConsumerWidget {
     this.backgroundColor,
     this.borderColor,
     this.hoverColor,
+    this.splashColor,
+    this.highlightColor,
     this.borderRadius,
     this.onPressed,
     required this.icon,
@@ -2130,6 +2185,8 @@ class AppIconButton extends ConsumerWidget {
       backgroundColor: backgroundColor,
       borderColor: borderColor,
       hoverColor: hoverColor,
+      splashColor: splashColor,
+      highlightColor: highlightColor,
 
       /// radius
       borderRadius: borderRadius,
@@ -2173,32 +2230,34 @@ class AppIconTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Container(
+    return AppButton(
+      backgroundColor: isActive
+          ? ref.color.primary.withOpacity(0.15)
+          : ref.color.surfaceVariant.withOpacity(0.4),
+      hoverColor: isActive ? ref.theme.color.primaryHover : null,
+      splashColor: isActive ? ref.theme.color.primarySplash : null,
+      highlightColor: isActive ? ref.theme.color.primaryHighlight : null,
+      borderRadius: BorderRadius.circular(6),
       margin: margin ?? const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
-      child: AppButton(
-        backgroundColor:
-            isActive ? ref.color.primary.withOpacity(0.15) : Colors.transparent,
-        borderRadius: BorderRadius.circular(6),
-        // padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        onPressed: onPressed,
-        child: Container(
-          decoration: isActive
-              ? BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: ref.color.primary,
-                      width: 2,
-                    ),
+      childPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      onPressed: onPressed,
+      child: Container(
+        decoration: isActive
+            ? BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: ref.color.primary,
+                    width: 2,
                   ),
-                )
-              : null,
-          child: Text(
-            text,
-            style: ref.font.semiBoldText12.copyWith(
-              color: isActive
-                  ? ref.color.primary
-                  : ref.color.onBackground.withOpacity(0.7),
-            ),
+                ),
+              )
+            : null,
+        child: Text(
+          text,
+          style: ref.font.semiBoldText12.copyWith(
+            color: isActive
+                ? ref.color.primary
+                : ref.color.onBackground.withOpacity(0.7),
           ),
         ),
       ),

@@ -21,9 +21,8 @@ class AppIconTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return AppButton(
-      backgroundColor: isActive
-          ? ref.color.primary.withOpacity(0.15)
-          : ref.color.surfaceVariant.withOpacity(0.4),
+      backgroundColor:
+          isActive ? ref.color.primarySoft : ref.color.surfaceVariantSoft,
       hoverColor: isActive ? ref.theme.color.primaryHover : null,
       splashColor: isActive ? ref.theme.color.primarySplash : null,
       highlightColor: isActive ? ref.theme.color.primaryHighlight : null,
@@ -45,9 +44,7 @@ class AppIconTab extends ConsumerWidget {
         child: Text(
           text,
           style: ref.font.semiBoldText12.copyWith(
-            color: isActive
-                ? ref.color.primary
-                : ref.color.onBackground.withOpacity(0.7),
+            color: isActive ? ref.color.primary : ref.color.onBackgroundSoft,
           ),
         ),
       ),

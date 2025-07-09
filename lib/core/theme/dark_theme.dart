@@ -15,6 +15,7 @@ class DarkTheme implements AppTheme {
   DarkTheme._internal() {
     _color = const AppColor(
       primary: DarkPalette.primary,
+      primarySoft: DarkPalette.primarySoft,
       primaryVariant: DarkPalette.primaryVariant,
       primaryHover: DarkPalette.primaryHover,
       primarySplash: DarkPalette.primarySplash,
@@ -24,12 +25,14 @@ class DarkTheme implements AppTheme {
       background: DarkPalette.background,
       surface: DarkPalette.surface,
       surfaceVariant: DarkPalette.surfaceVariant,
+      surfaceVariantSoft: DarkPalette.surfaceVariantSoft,
       terminalBackground: DarkPalette.terminalBackground,
       terminalSurface: DarkPalette.terminalSurface,
       terminalBorder: DarkPalette.terminalBorder,
       onPrimary: DarkPalette.onPrimary,
       onSecondary: DarkPalette.onSecondary,
       onBackground: DarkPalette.onBackground,
+      onBackgroundSoft: DarkPalette.onBackgroundSoft,
       onSurface: DarkPalette.onSurface,
       onSurfaceVariant: DarkPalette.onSurfaceVariant,
       terminalText: DarkPalette.terminalText,

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 abstract class DarkPalette {
 // Primary colors - Neon/Gaming Theme
   static const Color primary = Color(0xFF8B5CF6); // Violet-500
+  static const Color primarySoft =
+      Color(0x268B5CF6); // primary.withOpacity(0.15) - 활성 탭 배경
   static const Color primaryVariant = Color(0xFF7C3AED); // Violet-600
   static const Color primaryHover =
       Color(0x1A8B5CF6); // Violet-500 with 10% opacity
@@ -17,6 +19,8 @@ abstract class DarkPalette {
   static const Color background = Color(0xFF111827); // Gray-900
   static const Color surface = Color(0xFF1F2937); // Gray-800
   static const Color surfaceVariant = Color(0xFF374151); // Gray-700
+  static const Color surfaceVariantSoft =
+      Color(0x66374151); // surfaceVariant.withOpacity(0.4) - 비활성 탭 배경
 
   // Terminal specific colors
   static const Color terminalBackground = Color(0xFF000000); // Pure black
@@ -27,6 +31,8 @@ abstract class DarkPalette {
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color onSecondary = Color(0xFFFFFFFF);
   static const Color onBackground = Color(0xFFF9FAFB); // Gray-50
+  static const Color onBackgroundSoft =
+      Color(0xB3F9FAFB); // onBackground.withOpacity(0.7) - 부드러운 텍스트
   static const Color onSurface = Color(0xFFF9FAFB); // Gray-50
   static const Color onSurfaceVariant = Color(0xFF9CA3AF); // Gray-400
 

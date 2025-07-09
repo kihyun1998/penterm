@@ -98,7 +98,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
 
                     /// icon
                     icon: SVGAsset.windowMinimize,
-                    iconColor: ref.color.onBackground,
+                    iconColor: ref.color.onSurfaceVariant,
                     iconSize: 2,
                     onPressed: () => windowManager.minimize(),
                   ),
@@ -114,7 +114,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                         icon: isMaximized
                             ? SVGAsset.windowRestore
                             : SVGAsset.windowMaximize,
-                        iconColor: ref.color.onBackground,
+                        iconColor: ref.color.onSurfaceVariant,
                         iconSize: 14,
                         onPressed: () {
                           ref
@@ -130,7 +130,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
 
                     /// icon
                     icon: SVGAsset.windowClose,
-                    iconColor: ref.color.onBackground,
+                    iconColor: ref.color.onSurfaceVariant,
                     iconSize: 14,
                     onPressed: () => windowManager.close(),
                   ),
