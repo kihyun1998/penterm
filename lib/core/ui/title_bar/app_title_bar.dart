@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../feature/terminal/provider/tab_drag_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 import '../app_icon_tab.dart';
 import 'provider/is_window_maximized_provider.dart';
+import 'tab_drop_zone.dart';
 import 'terminal_tab_widget.dart';
 
 class AppTitleBar extends ConsumerStatefulWidget {
@@ -54,6 +56,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
     final tabMap = ref.watch(tabListProvider);
+    final dragState = ref.watch(tabDragProvider);
 
     // Map에서 직접 처리 - order 순으로 정렬
     final allTabs = tabMap.values.toList();
@@ -96,16 +99,33 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     color: ref.color.border,
                   ),
 
-                // 🖥️ 터미널 탭들
+                // 🖥️ 터미널 탭들 + 드롭 영역들
                 if (draggableTabs.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: draggableTabs.map((tab) {
-                      return TerminalTabWidget(
-                        tab: tab,
-                        activeTabId: activeTabId,
-                      );
-                    }).toList(),
+                  Stack(
+                    children: [
+                      // 하위 레이어: 일반 탭들
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: draggableTabs.map((tab) {
+                          return TerminalTabWidget(
+                            tab: tab,
+                            activeTabId: activeTabId,
+                          );
+                        }).toList(),
+                      ),
+
+                      // 상위 레이어: 드롭 영역들 (드래그 중일 때만 활성화)
+                      if (dragState.isDragging)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: draggableTabs.map((tab) {
+                            return TabDropZone(
+                              targetOrder: tab.order,
+                              targetTabName: tab.name,
+                            );
+                          }).toList(),
+                        ),
+                    ],
                   ),
 
                 // + 버튼 (탭 추가)

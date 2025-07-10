@@ -6,7 +6,7 @@ part of 'tab_drag_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tabDragHash() => r'970f721696f45431654194a7887fa104e7308f18';
+String _$tabDragHash() => r'a1ec05d66820a96e1b20d416addb6af0e90e2f8e';
 
 /// See also [TabDrag].
 @ProviderFor(TabDrag)

@@ -111,8 +111,9 @@ class TabDragState {
     // 드래그 중인 탭의 현재 order
     final currentDraggingOrder = draggingTab.order;
 
+    // 자기 자신에게 드롭하는 경우
     if (currentDraggingOrder == targetOrder) {
-      return currentTabs; // 같은 위치면 변경 없음
+      return currentTabs; // 변경 없음
     }
 
     final result = <String, TabInfo>{};
@@ -152,10 +153,28 @@ class TabDragState {
     final expectedOrder = expectedResult.values.toList()
       ..sort((a, b) => a.order.compareTo(b.order));
 
+    // 드래그 중인 탭의 원래 order
+    final originalOrder = draggingTab?.order;
+
+    // 타겟 탭 정보
+    final targetTabInfo =
+        targetTab != null ? '${targetTab!.name}(${targetTab!.order})' : 'None';
+
+    // Place Order 계산 (자기 자신인지 확인)
+    String placeOrderInfo;
+    if (targetOrder == null) {
+      placeOrderInfo = '${originalOrder ?? 'unknown'} (original position)';
+    } else if (targetOrder == originalOrder) {
+      placeOrderInfo = '$targetOrder (same as original - no change)';
+    } else {
+      placeOrderInfo = '$targetOrder (new position)';
+    }
+
     return '''
 Current: [${currentOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}]
-Dragging: ${draggingTab?.name} (order ${draggingTab?.order})
-Target Order: $targetOrder
+Dragging: ${draggingTab?.name} (original order: $originalOrder)
+Target Order: ${targetOrder ?? 'null'} (${targetOrder != null ? 'Target Tab: $targetTabInfo' : 'Outside drop zones'})
+Place Order: $placeOrderInfo
 Expected: [${expectedOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}]
 ''';
   }

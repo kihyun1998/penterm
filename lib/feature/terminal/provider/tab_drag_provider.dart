@@ -58,7 +58,12 @@ class TabDrag extends _$TabDrag {
       return;
     }
 
-    print('🎯 Update target: order $newTargetOrder (${targetTab.name})');
+    // 자기 자신에게 드롭하는 것도 허용 (원래 자리로 돌아가기)
+    if (state.draggingTabId == targetTab.id) {
+      print('🔄 Drop on self: ${targetTab.name} (return to original position)');
+    } else {
+      print('🎯 Update target: order $newTargetOrder (${targetTab.name})');
+    }
 
     state = state.updateTarget(
       newTargetOrder: newTargetOrder,
