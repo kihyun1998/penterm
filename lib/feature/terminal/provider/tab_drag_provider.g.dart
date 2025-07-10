@@ -6,7 +6,7 @@ part of 'tab_drag_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tabDragHash() => r'7b31e6b2c4fcfd70cc535a31d46cf3cbcff5bc9f';
+String _$tabDragHash() => r'13ef24a2a4c959000140917c4bfb2142d8037ab2';
 
 /// See also [TabDrag].
 @ProviderFor(TabDrag)
@@ -16,8 +16,11 @@ final tabDragProvider =
   name: r'tabDragProvider',
   debugGetCreateSourceHash:
       const bool.fromEnvironment('dart.vm.product') ? null : _$tabDragHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
+  dependencies: <ProviderOrFamily>[tabListProvider],
+  allTransitiveDependencies: <ProviderOrFamily>{
+    tabListProvider,
+    ...?tabListProvider.allTransitiveDependencies
+  },
 );
 
 typedef _$TabDrag = AutoDisposeNotifier<TabDragState>;

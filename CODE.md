@@ -54,9 +54,11 @@ penterm/
         └── terminal/
         │   ├── model/
         │       ├── enum_tab_type.dart
+        │       ├── tab_drag_state.dart
         │       └── tab_info.dart
         │   └── provider/
         │       ├── active_tabinfo_provider.dart
+        │       ├── tab_drag_provider.dart
         │       ├── tab_list_provider.dart
         │       └── tab_provider.dart
     ├── page/
@@ -2286,6 +2288,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../feature/terminal/model/tab_info.dart';
+import '../../../feature/terminal/provider/tab_drag_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
@@ -2302,6 +2306,9 @@ class AppTitleBar extends ConsumerStatefulWidget {
 }
 
 class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
+  // 각 터미널 탭의 GlobalKey를 저장하는 맵
+  final Map<String, GlobalKey> _tabKeys = {};
+
   @override
   void initState() {
     super.initState();
@@ -2335,10 +2342,29 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
     // 🚀 setState() 없음 - 전체 위젯 rebuild 없음!
   }
 
+  /// 터미널 탭의 GlobalKey를 가져오거나 생성
+  GlobalKey _getTabKey(String tabId) {
+    if (!_tabKeys.containsKey(tabId)) {
+      _tabKeys[tabId] = GlobalKey();
+    }
+    return _tabKeys[tabId]!;
+  }
+
+  /// 사용하지 않는 TabKey 정리
+  void _cleanupTabKeys(List<TabInfo> currentTabs) {
+    final currentTabIds = currentTabs.map((tab) => tab.id).toSet();
+    _tabKeys.removeWhere((key, value) => !currentTabIds.contains(key));
+  }
+
   @override
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
     final tabList = ref.watch(tabListProvider);
+    final dragState = ref.watch(tabDragProvider);
+    final fixedTabs = tabList.where((tab) => !tab.isClosable).toList();
+    final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
+// 사용하지 않는 TabKey 정리
+    _cleanupTabKeys(tabList);
 
     return Container(
       height: 50,
@@ -2356,32 +2382,44 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
             child: Row(
               children: [
                 // 🏠 고정 탭들 (HOME, SFTP)
-                ...tabList
-                    .where((tab) => !tab.isClosable)
-                    .map((tab) => AppIconTab(
-                          text: tab.name,
-                          isActive: activeTabId == tab.id,
-                          onPressed: () => ref
-                              .read(activeTabProvider.notifier)
-                              .setTab(tab.id),
-                        )),
+                ...fixedTabs.map((tab) => AppIconTab(
+                      text: tab.name,
+                      isActive: activeTabId == tab.id,
+                      onPressed: () =>
+                          ref.read(activeTabProvider.notifier).setTab(tab.id),
+                    )),
 
                 // 구분선
-                Container(
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-                  width: 1,
-                  height: double.infinity,
-                  color: ref.color.border,
-                ),
+                if (draggableTabs.isNotEmpty)
+                  Container(
+                    margin:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                    width: 1,
+                    height: double.infinity,
+                    color: ref.color.border,
+                  ),
 
-                // 🖥️ 동적 탭들 (Terminal 등) - 새로운 위젯 사용
-                ...tabList
-                    .where((tab) => tab.isClosable)
-                    .map((tab) => TerminalTabWidget(
+                // 🖥️ 드래그 가능한 터미널 탭들
+                ...draggableTabs.map((tab) => DragTarget<TabInfo>(
+                      onWillAcceptWithDetails: (data) {
+                        // 드래그 중인 데이터가 유효한지 확인
+                        return data.data.id != tab.id;
+                      },
+                      onAcceptWithDetails: (draggedTab) {
+                        // 드롭된 탭의 새로운 위치 계산
+                        final targetIndex = tabList.indexOf(tab);
+                        ref
+                            .read(tabDragProvider.notifier)
+                            .updateTargetIndex(targetIndex);
+                      },
+                      builder: (context, candidateData, rejectedData) {
+                        return TerminalTabWidget(
                           tab: tab,
                           activeTabId: activeTabId,
-                        )),
+                          tabKey: _getTabKey(tab.id),
+                        );
+                      },
+                    )),
 
                 // + 버튼 (탭 추가)
                 AppIconButton(
@@ -2410,8 +2448,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                   onPressed: () {
                     print('오버플로우 메뉴 클릭');
                   },
-                  icon: SVGAsset
-                      .elipsisVertical, // 임시로 minimize 아이콘 사용 (... 아이콘 없음)
+                  icon: SVGAsset.elipsisVertical,
                   iconColor: ref.color.onSurfaceVariant,
                   iconSize: 14,
                 ),
@@ -2425,8 +2462,6 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     AppIconButton(
                       width: 30,
                       height: 30,
-
-                      /// icon
                       icon: SVGAsset.windowMinimize,
                       iconColor: ref.color.onSurfaceVariant,
                       iconSize: 2,
@@ -2440,8 +2475,6 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                           width: 30,
                           height: 30,
                           margin: const EdgeInsets.symmetric(horizontal: 5),
-
-                          /// icon
                           icon: isMaximized
                               ? SVGAsset.windowRestore
                               : SVGAsset.windowMaximize,
@@ -2458,8 +2491,6 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     AppIconButton(
                       width: 30,
                       height: 30,
-
-                      /// icon
                       icon: SVGAsset.windowClose,
                       iconColor: ref.color.onSurfaceVariant,
                       iconSize: 14,
@@ -2470,6 +2501,37 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
               ],
             ),
           ),
+
+          // 🎯 드래그 상태 디버그 정보 (개발 중에만)
+          if (dragState.isDragging)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                color: Colors.black87,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Dragging: ${dragState.draggingTabId}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                    Text(
+                      'Target Index: ${dragState.targetIndex ?? "None"}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                    if (dragState.targetIndex != null)
+                      Text(
+                        'Target Tab: ${tabList[dragState.targetIndex!].name}',
+                        style:
+                            const TextStyle(color: Colors.yellow, fontSize: 10),
+                      ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -2526,7 +2588,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
+import '../../../feature/terminal/model/enum_tab_type.dart';
 import '../../../feature/terminal/model/tab_info.dart';
+import '../../../feature/terminal/provider/active_tabinfo_provider.dart';
+import '../../../feature/terminal/provider/tab_drag_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
@@ -2535,11 +2600,13 @@ import '../app_icon_button.dart';
 class TerminalTabWidget extends ConsumerStatefulWidget {
   final TabInfo tab;
   final String activeTabId;
+  final GlobalKey? tabKey;
 
   const TerminalTabWidget({
     super.key,
     required this.tab,
     required this.activeTabId,
+    this.tabKey,
   });
 
   @override
@@ -2552,8 +2619,87 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
   @override
   Widget build(BuildContext context) {
     final isActive = widget.activeTabId == widget.tab.id;
+    final dragState = ref.watch(tabDragProvider);
+    final activeTabInfo = ref.watch(activeTabInfoProvider);
+    final tabList = ref.watch(tabListProvider);
 
+    // 현재 활성 탭이 Terminal이 아니면 드래그 비활성화
+    final canDrag = activeTabInfo?.type == TabType.terminal;
+
+    // 현재 탭이 드래그 중인지 확인
+    final isDragging = dragState.draggingTabId == widget.tab.id;
+
+    // 현재 탭의 인덱스 계산
+    final currentTabIndex = tabList.indexOf(widget.tab);
+
+    // 타겟 위치인지 확인 (플레이스홀더 표시할 위치)
+    final isTargetPosition = dragState.isDragging &&
+        dragState.targetIndex == currentTabIndex &&
+        !isDragging; // 드래그 중인 탭 자신은 제외
+
+    // 렌더링 우선순위:
+    // 1. 드래그 중인 탭 -> 숨김 (빈 공간)
+    // 2. 타겟 위치 탭 -> 플레이스홀더 + 실제 탭
+    // 3. 일반 탭 -> 실제 탭
+
+    if (isDragging) {
+      // 드래그 중인 탭은 빈 공간으로 표시
+      return _buildEmptySpace();
+    }
+
+    if (isTargetPosition) {
+      // 타겟 위치에는 플레이스홀더 + 실제 탭을 나란히 표시
+      return AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildPlaceholder(), // 드래그된 탭이 들어갈 자리
+            _buildTabContent(isActive), // 기존 탭
+          ],
+        ),
+      );
+    }
+
+    // 일반 탭 위젯 (애니메이션 적용)
+    final tabWidget = AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeInOut,
+      child: _buildTabContent(isActive),
+    );
+
+    // 드래그 가능한 경우 Draggable로 감싸기
+    if (canDrag && widget.tab.isClosable) {
+      return Draggable<TabInfo>(
+        data: widget.tab,
+        feedback: _buildDragFeedback(isActive),
+        childWhenDragging: _buildEmptySpace(), // 드래그 중 빈 공간
+        onDragStarted: () {
+          ref.read(tabDragProvider.notifier).startDrag(widget.tab.id);
+        },
+        onDragUpdate: (details) {
+          ref
+              .read(tabDragProvider.notifier)
+              .updateDragPosition(details.globalPosition);
+        },
+        onDragEnd: (details) {
+          ref.read(tabDragProvider.notifier).endDrag();
+        },
+        onDraggableCanceled: (velocity, offset) {
+          ref.read(tabDragProvider.notifier).cancelDrag();
+        },
+        child: tabWidget,
+      );
+    }
+
+    return tabWidget;
+  }
+
+  /// 실제 탭 내용
+  Widget _buildTabContent(bool isActive) {
     return Container(
+      key: widget.tabKey,
       margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
@@ -2638,6 +2784,126 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                   ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 드래그 피드백 (드래그 중 마우스를 따라다니는 위젯)
+  Widget _buildDragFeedback(bool isActive) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+        decoration: BoxDecoration(
+          color:
+              isActive ? ref.color.primarySoft : ref.color.surfaceVariantSoft,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(6),
+            topRight: Radius.circular(6),
+          ),
+          border: isActive
+              ? Border(
+                  bottom: BorderSide(
+                    color: ref.color.primary,
+                    width: 2,
+                  ),
+                )
+              : null,
+          // 드래그 중임을 나타내는 그림자 효과
+          boxShadow: [
+            BoxShadow(
+              color: ref.color.primary.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 탭 아이콘 (터미널)
+              Icon(
+                Icons.terminal,
+                size: 14,
+                color:
+                    isActive ? ref.color.primary : ref.color.onBackgroundSoft,
+              ),
+              const SizedBox(width: 6),
+              // 탭 이름
+              Text(
+                widget.tab.name,
+                style: ref.font.semiBoldText12.copyWith(
+                  color:
+                      isActive ? ref.color.primary : ref.color.onBackgroundSoft,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 빈 공간 (드래그 중인 탭이 차지하던 공간)
+  Widget _buildEmptySpace() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+      width: 120, // 탭의 기본 너비와 동일하게
+      height: 0, // 높이는 0으로 하여 공간만 차지
+    );
+  }
+
+  /// 플레이스홀더 (드래그 중 원래 자리에 표시)
+  Widget _buildPlaceholder() {
+    final dragState = ref.watch(tabDragProvider);
+    final draggingTabName = dragState.isDragging
+        ? ref
+            .read(tabListProvider)
+            .firstWhere((tab) => tab.id == dragState.draggingTabId)
+            .name
+        : '';
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: ref.color.primary.withOpacity(0.7),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(6),
+            topRight: Radius.circular(6),
+          ),
+          // 약간의 배경색 추가
+          color: ref.color.primary.withOpacity(0.1),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 플레이스홀더 아이콘
+              Icon(
+                Icons.terminal,
+                size: 14,
+                color: ref.color.primary.withOpacity(0.7),
+              ),
+              const SizedBox(width: 6),
+              // 플레이스홀더 텍스트
+              Text(
+                draggingTabName.isNotEmpty ? draggingTabName : 'Drop here',
+                style: ref.font.semiBoldText12.copyWith(
+                  color: ref.color.primary.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(width: 16), // X 버튼 공간 확보
+            ],
           ),
         ),
       ),
@@ -3184,6 +3450,52 @@ enum TabType {
 }
 
 ```
+## lib/feature/terminal/model/tab_drag_state.dart
+```dart
+import 'package:flutter/material.dart';
+
+/// 탭 드래그 상태를 관리하는 모델
+class TabDragState {
+  /// 현재 드래그 중인 탭 ID
+  final String? draggingTabId;
+
+  /// 드래그 중인 탭이 들어갈 예상 인덱스
+  final int? targetIndex;
+
+  /// 드래그 중인 마우스 위치
+  final Offset? dragPosition;
+
+  /// 드래그가 활성화된 상태인지
+  bool get isDragging => draggingTabId != null;
+
+  const TabDragState({
+    this.draggingTabId,
+    this.targetIndex,
+    this.dragPosition,
+  });
+
+  /// 초기 상태 (드래그 없음)
+  static const TabDragState initial = TabDragState();
+
+  TabDragState copyWith({
+    String? draggingTabId,
+    int? targetIndex,
+    Offset? dragPosition,
+  }) {
+    return TabDragState(
+      draggingTabId: draggingTabId ?? this.draggingTabId,
+      targetIndex: targetIndex ?? this.targetIndex,
+      dragPosition: dragPosition ?? this.dragPosition,
+    );
+  }
+
+  /// 드래그 초기화 (드래그 종료)
+  TabDragState clearDrag() {
+    return const TabDragState();
+  }
+}
+
+```
 ## lib/feature/terminal/model/tab_info.dart
 ```dart
 import 'enum_tab_type.dart';
@@ -3238,6 +3550,122 @@ TabInfo? activeTabInfo(Ref ref) {
     return tabList.firstWhere((tab) => tab.id == activeTabId);
   } catch (e) {
     return null;
+  }
+}
+
+```
+## lib/feature/terminal/provider/tab_drag_provider.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../model/tab_drag_state.dart';
+import '../model/tab_info.dart';
+import 'tab_list_provider.dart';
+
+part 'tab_drag_provider.g.dart';
+
+@Riverpod(dependencies: [TabList])
+class TabDrag extends _$TabDrag {
+  @override
+  TabDragState build() {
+    return TabDragState.initial;
+  }
+
+  /// 드래그 시작
+  void startDrag(String tabId) {
+    state = state.copyWith(draggingTabId: tabId);
+  }
+
+  /// 드래그 위치 업데이트
+  void updateDragPosition(Offset position) {
+    if (!state.isDragging) return;
+
+    state = state.copyWith(dragPosition: position);
+  }
+
+  /// 드래그 타겟 인덱스 업데이트
+  void updateTargetIndex(int? targetIndex) {
+    if (!state.isDragging) return;
+
+    state = state.copyWith(targetIndex: targetIndex);
+  }
+
+  /// 드래그 종료 (성공적으로 드롭)
+  void endDrag() {
+    if (!state.isDragging) return;
+
+    final draggingTabId = state.draggingTabId!;
+    final targetIndex = state.targetIndex;
+
+    // 실제 탭 순서 변경 (targetIndex가 있는 경우만)
+    if (targetIndex != null) {
+      ref.read(tabListProvider.notifier).reorderTab(draggingTabId, targetIndex);
+    }
+
+    // 드래그 상태 초기화 (순서 변경 후)
+    state = state.clearDrag();
+  }
+
+  /// 드래그 취소
+  void cancelDrag() {
+    state = state.clearDrag();
+  }
+
+  /// 마우스 위치로부터 타겟 인덱스 계산 (전체 탭 리스트 기준)
+  int? calculateTargetIndex(
+    Offset globalPosition,
+    List<TabInfo> allTabs,
+    Map<String, GlobalKey> tabKeys,
+  ) {
+    if (!state.isDragging) return null;
+
+    final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
+    final fixedTabCount = allTabs.where((tab) => !tab.isClosable).length;
+
+    // 드래그 가능한 탭들의 위치 확인
+    for (int i = 0; i < draggableTabs.length; i++) {
+      final tab = draggableTabs[i];
+      final key = tabKeys[tab.id];
+      final renderBox = key?.currentContext?.findRenderObject() as RenderBox?;
+
+      if (renderBox != null) {
+        final tabPosition = renderBox.localToGlobal(Offset.zero);
+        final tabSize = renderBox.size;
+
+        // 마우스가 이 탭 영역 위에 있는지 확인
+        if (globalPosition.dx >= tabPosition.dx &&
+            globalPosition.dx <= tabPosition.dx + tabSize.width) {
+          // 전체 탭 리스트에서의 실제 인덱스 반환
+          return fixedTabCount + i;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  /// 드래그 중 실시간 업데이트 (마우스 이동할 때마다 호출)
+  void onDragMove(
+    Offset globalPosition,
+    List<TabInfo> allTabs,
+    Map<String, GlobalKey> tabKeys,
+  ) {
+    if (!state.isDragging) return;
+
+    final newTargetIndex =
+        calculateTargetIndex(globalPosition, allTabs, tabKeys);
+
+    // 타겟 인덱스가 변경되었을 때만 업데이트
+    if (newTargetIndex != state.targetIndex) {
+      state = state.copyWith(
+        dragPosition: globalPosition,
+        targetIndex: newTargetIndex,
+      );
+    } else {
+      // 타겟 인덱스는 같지만 마우스 위치는 업데이트
+      state = state.copyWith(dragPosition: globalPosition);
+    }
   }
 }
 
@@ -3318,6 +3746,44 @@ class TabList extends _$TabList {
       }
       return tab;
     }).toList();
+  }
+
+  /// 탭 순서 변경 (드래그 앤 드롭용)
+  void reorderTab(String tabId, int targetIndex) {
+    final currentTabs = List<TabInfo>.from(state);
+
+    // 이동할 탭 찾기
+    final sourceIndex = currentTabs.indexWhere((tab) => tab.id == tabId);
+    if (sourceIndex == -1) return;
+
+    final tabToMove = currentTabs[sourceIndex];
+
+    // 고정 탭은 이동할 수 없음
+    if (!tabToMove.isClosable) return;
+
+    // 고정 탭 개수 계산 (HOME, SFTP)
+    final fixedTabCount = currentTabs.where((tab) => !tab.isClosable).length;
+
+    // 타겟 인덱스는 고정 탭 이후여야 함
+    final adjustedTargetIndex =
+        targetIndex < fixedTabCount ? fixedTabCount : targetIndex;
+
+    // 범위 체크
+    if (adjustedTargetIndex < 0 || adjustedTargetIndex > currentTabs.length) {
+      return;
+    }
+
+    // 탭 이동
+    currentTabs.removeAt(sourceIndex);
+
+    // 삽입 위치 조정 (원본이 제거되었으므로)
+    final insertIndex = adjustedTargetIndex > sourceIndex
+        ? adjustedTargetIndex - 1
+        : adjustedTargetIndex;
+
+    currentTabs.insert(insertIndex, tabToMove);
+
+    state = currentTabs;
   }
 }
 

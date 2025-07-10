@@ -74,13 +74,19 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
-    final tabList = ref.watch(tabListProvider);
+    final tabMap = ref.watch(tabListProvider);
     final dragState = ref.watch(tabDragProvider);
-    final fixedTabs = tabList.where((tab) => !tab.isClosable).toList();
-    final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
+
+    // Map에서 직접 처리 - order 순으로 정렬
+    final allTabs = tabMap.values.toList();
+    allTabs.sort((a, b) => a.order.compareTo(b.order));
+
+    // 필터링
+    final fixedTabs = allTabs.where((tab) => !tab.isClosable).toList();
+    final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
 
     // 사용하지 않는 TabKey 정리
-    _cleanupTabKeys(tabList);
+    _cleanupTabKeys(allTabs);
 
     return Container(
       height: 50,
@@ -115,27 +121,38 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     color: ref.color.border,
                   ),
 
-                // 🖥️ 드래그 가능한 터미널 탭들
-                ...draggableTabs.map((tab) => DragTarget<TabInfo>(
-                      onWillAcceptWithDetails: (data) {
-                        // 드래그 중인 데이터가 유효한지 확인
-                        return data.data.id != tab.id;
-                      },
-                      onAcceptWithDetails: (draggedTab) {
-                        // 드롭된 탭의 새로운 위치 계산
-                        final targetIndex = tabList.indexOf(tab);
-                        ref
-                            .read(tabDragProvider.notifier)
-                            .updateTargetIndex(targetIndex);
-                      },
-                      builder: (context, candidateData, rejectedData) {
-                        return TerminalTabWidget(
-                          tab: tab,
-                          activeTabId: activeTabId,
-                          tabKey: _getTabKey(tab.id),
-                        );
-                      },
-                    )),
+                // 🖥️ 드래그 가능한 터미널 탭들 - 전체를 하나의 DragTarget으로 감싸서 실시간 추적
+                if (draggableTabs.isNotEmpty)
+                  DragTarget<TabInfo>(
+                    onWillAcceptWithDetails: (data) {
+                      // 드래그 중인 데이터가 유효한지 확인
+                      return draggableTabs.any((tab) => tab.id == data.data.id);
+                    },
+                    onMove: (details) {
+                      // 실시간으로 드래그 위치 추적하여 타겟 인덱스 계산
+                      ref.read(tabDragProvider.notifier).onDragMove(
+                            details.offset,
+                            tabMap,
+                            _tabKeys,
+                          );
+                    },
+                    onAcceptWithDetails: (draggedTab) {
+                      // 최종 드롭 시 실제 순서 변경
+                      ref.read(tabDragProvider.notifier).endDrag();
+                    },
+                    builder: (context, candidateData, rejectedData) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: draggableTabs.map((tab) {
+                          return TerminalTabWidget(
+                            tab: tab,
+                            activeTabId: activeTabId,
+                            tabKey: _getTabKey(tab.id),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
 
                 // + 버튼 (탭 추가)
                 AppIconButton(
@@ -225,10 +242,27 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
               left: 0,
               child: Container(
                 padding: const EdgeInsets.all(4),
-                color: Colors.black54,
-                child: Text(
-                  'Dragging: ${dragState.draggingTabId}, Target: ${dragState.targetIndex}',
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
+                color: Colors.black87,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Dragging: ${dragState.draggingTabId}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                    Text(
+                      'Target Index: ${dragState.targetIndex ?? "None"}',
+                      style: const TextStyle(color: Colors.white, fontSize: 10),
+                    ),
+                    if (dragState.targetIndex != null &&
+                        dragState.targetIndex! < allTabs.length)
+                      Text(
+                        'Target Tab: ${allTabs[dragState.targetIndex!].name}',
+                        style:
+                            const TextStyle(color: Colors.yellow, fontSize: 10),
+                      ),
+                  ],
                 ),
               ),
             ),

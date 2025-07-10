@@ -9,38 +9,49 @@ part 'tab_list_provider.g.dart';
 @Riverpod(dependencies: [ActiveTab])
 class TabList extends _$TabList {
   @override
-  List<TabInfo> build() {
-    return [
-      TabInfo(
+  Map<String, TabInfo> build() {
+    return {
+      TabType.home.value: TabInfo(
         id: TabType.home.value,
         type: TabType.home,
         name: TabType.home.displayName,
         isClosable: false,
+        order: 0,
       ),
-      TabInfo(
+      TabType.sftp.value: TabInfo(
         id: TabType.sftp.value,
         type: TabType.sftp,
         name: TabType.sftp.displayName,
         isClosable: false,
+        order: 1,
       ),
-    ];
+    };
   }
 
   /// 새 터미널 탭 추가
   void addTerminalTab() {
     final currentTabs = state;
     final terminalCount =
-        currentTabs.where((tab) => tab.type == TabType.terminal).length;
+        currentTabs.values.where((tab) => tab.type == TabType.terminal).length;
 
     final newTabId = 'terminal_${DateTime.now().millisecondsSinceEpoch}';
+
+    // 마지막 order 계산
+    final maxOrder = currentTabs.values.isNotEmpty
+        ? currentTabs.values
+            .map((tab) => tab.order)
+            .reduce((a, b) => a > b ? a : b)
+        : -1;
+
     final newTab = TabInfo(
       id: newTabId,
       type: TabType.terminal,
       name: 'Terminal ${terminalCount + 1}',
       isClosable: true,
+      order: maxOrder + 1,
     );
 
-    state = [...currentTabs, newTab];
+    state = {...currentTabs, newTabId: newTab};
 
     // 새로 추가된 탭으로 이동
     ref.read(activeTabProvider.notifier).setTab(newTabId);
@@ -48,14 +59,16 @@ class TabList extends _$TabList {
 
   /// 탭 제거
   void removeTab(String tabId) {
-    final currentTabs = state;
-    final tabToRemove = currentTabs.firstWhere((tab) => tab.id == tabId);
+    final currentTabs = Map<String, TabInfo>.from(state);
+    final tabToRemove = currentTabs[tabId];
+
+    if (tabToRemove == null) return;
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) return;
 
-    final newTabs = currentTabs.where((tab) => tab.id != tabId).toList();
-    state = newTabs;
+    currentTabs.remove(tabId);
+    state = currentTabs;
 
     // 제거된 탭이 현재 활성 탭이었다면 Home으로 이동
     final activeTabId = ref.read(activeTabProvider);
@@ -66,49 +79,68 @@ class TabList extends _$TabList {
 
   /// 탭 이름 변경
   void renameTab(String tabId, String newName) {
-    state = state.map((tab) {
-      if (tab.id == tabId) {
-        return tab.copyWith(name: newName);
-      }
-      return tab;
-    }).toList();
+    final currentTabs = Map<String, TabInfo>.from(state);
+    final tab = currentTabs[tabId];
+
+    if (tab != null) {
+      currentTabs[tabId] = tab.copyWith(name: newName);
+      state = currentTabs;
+    }
   }
 
   /// 탭 순서 변경 (드래그 앤 드롭용)
   void reorderTab(String tabId, int targetIndex) {
-    final currentTabs = List<TabInfo>.from(state);
+    final currentTabs = Map<String, TabInfo>.from(state);
+    final tabToMove = currentTabs[tabId];
 
-    // 이동할 탭 찾기
-    final sourceIndex = currentTabs.indexWhere((tab) => tab.id == tabId);
-    if (sourceIndex == -1) return;
+    if (tabToMove == null || !tabToMove.isClosable) return;
 
-    final tabToMove = currentTabs[sourceIndex];
+    // 고정 탭 개수 계산
+    final fixedTabCount =
+        currentTabs.values.where((tab) => !tab.isClosable).length;
 
-    // 고정 탭은 이동할 수 없음
-    if (!tabToMove.isClosable) return;
-
-    // 고정 탭 개수 계산 (HOME, SFTP)
-    final fixedTabCount = currentTabs.where((tab) => !tab.isClosable).length;
-
-    // 타겟 인덱스는 고정 탭 이후여야 함
+    // 타겟 인덱스 조정 (고정 탭 이후로만 이동 가능)
     final adjustedTargetIndex =
         targetIndex < fixedTabCount ? fixedTabCount : targetIndex;
 
+    // 전체 탭 리스트 (순서대로 정렬)
+    final orderedTabs = currentTabs.values.toList();
+    orderedTabs.sort((a, b) => a.order.compareTo(b.order));
+
     // 범위 체크
-    if (adjustedTargetIndex < 0 || adjustedTargetIndex > currentTabs.length) {
+    if (adjustedTargetIndex < 0 || adjustedTargetIndex >= orderedTabs.length) {
       return;
     }
 
-    // 탭 이동
-    currentTabs.removeAt(sourceIndex);
+    // 새로운 order 값들 계산
+    final updatedTabs = <String, TabInfo>{};
 
-    // 삽입 위치 조정 (원본이 제거되었으므로)
-    final insertIndex = adjustedTargetIndex > sourceIndex
-        ? adjustedTargetIndex - 1
-        : adjustedTargetIndex;
+    // 기존 탭들의 order를 재정렬
+    int newOrder = 0;
+    for (int i = 0; i < orderedTabs.length; i++) {
+      final tab = orderedTabs[i];
 
-    currentTabs.insert(insertIndex, tabToMove);
+      if (tab.id == tabId) {
+        // 드래그 중인 탭은 건너뛰기 (나중에 타겟 위치에 삽입)
+        continue;
+      }
 
-    state = currentTabs;
+      if (newOrder == adjustedTargetIndex) {
+        // 타겟 위치에 드래그 중인 탭 삽입
+        updatedTabs[tabId] = tabToMove.copyWith(order: newOrder);
+        newOrder++;
+      }
+
+      // 기존 탭 추가
+      updatedTabs[tab.id] = tab.copyWith(order: newOrder);
+      newOrder++;
+    }
+
+    // 마지막 위치에 삽입하는 경우
+    if (!updatedTabs.containsKey(tabId)) {
+      updatedTabs[tabId] = tabToMove.copyWith(order: adjustedTargetIndex);
+    }
+
+    state = updatedTabs;
   }
 }

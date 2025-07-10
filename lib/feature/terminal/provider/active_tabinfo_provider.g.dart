@@ -6,7 +6,7 @@ part of 'active_tabinfo_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$activeTabInfoHash() => r'6b6b4440513ca1881df368fc9aaadf85b2376f62';
+String _$activeTabInfoHash() => r'ec9fe95237d09b76f2b8088cf643ddad40444d63';
 
 /// See also [activeTabInfo].
 @ProviderFor(activeTabInfo)
@@ -16,8 +16,13 @@ final activeTabInfoProvider = AutoDisposeProvider<TabInfo?>.internal(
   debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
       ? null
       : _$activeTabInfoHash,
-  dependencies: null,
-  allTransitiveDependencies: null,
+  dependencies: <ProviderOrFamily>[activeTabProvider, tabListProvider],
+  allTransitiveDependencies: <ProviderOrFamily>{
+    activeTabProvider,
+    ...?activeTabProvider.allTransitiveDependencies,
+    tabListProvider,
+    ...?tabListProvider.allTransitiveDependencies
+  },
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')

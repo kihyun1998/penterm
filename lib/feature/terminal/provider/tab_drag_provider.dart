@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../model/tab_drag_state.dart';
+import '../model/tab_info.dart';
 import 'tab_list_provider.dart';
 
 part 'tab_drag_provider.g.dart';
 
-@riverpod
+@Riverpod(dependencies: [TabList])
 class TabDrag extends _$TabDrag {
   @override
   TabDragState build() {
@@ -39,13 +40,13 @@ class TabDrag extends _$TabDrag {
     final draggingTabId = state.draggingTabId!;
     final targetIndex = state.targetIndex;
 
-    // 드래그 상태 초기화
-    state = state.clearDrag();
-
     // 실제 탭 순서 변경 (targetIndex가 있는 경우만)
     if (targetIndex != null) {
       ref.read(tabListProvider.notifier).reorderTab(draggingTabId, targetIndex);
     }
+
+    // 드래그 상태 초기화 (순서 변경 후)
+    state = state.clearDrag();
   }
 
   /// 드래그 취소
@@ -53,26 +54,60 @@ class TabDrag extends _$TabDrag {
     state = state.clearDrag();
   }
 
-  /// 마우스 위치로부터 타겟 인덱스 계산
-  int? calculateTargetIndex(Offset globalPosition, List<GlobalKey> tabKeys) {
+  /// 드래그 중 실시간 업데이트 (마우스 이동할 때마다 호출)
+  /// Map을 받아서 내부에서 List로 변환하여 처리
+  void onDragMove(
+    Offset globalPosition,
+    Map<String, TabInfo> tabMap,
+    Map<String, GlobalKey> tabKeys,
+  ) {
+    if (!state.isDragging) return;
+
+    // Map을 List로 변환 (순서대로 정렬)
+    final allTabs = tabMap.values.toList();
+    allTabs.sort((a, b) => a.order.compareTo(b.order));
+
+    final newTargetIndex =
+        calculateTargetIndex(globalPosition, allTabs, tabKeys);
+
+    // 타겟 인덱스가 변경되었을 때만 업데이트
+    if (newTargetIndex != state.targetIndex) {
+      state = state.copyWith(
+        dragPosition: globalPosition,
+        targetIndex: newTargetIndex,
+      );
+    } else {
+      // 타겟 인덱스는 같지만 마우스 위치는 업데이트
+      state = state.copyWith(dragPosition: globalPosition);
+    }
+  }
+
+  /// 마우스 위치로부터 타겟 인덱스 계산 (전체 탭 리스트 기준)
+  int? calculateTargetIndex(
+    Offset globalPosition,
+    List<TabInfo> allTabs,
+    Map<String, GlobalKey> tabKeys,
+  ) {
     if (!state.isDragging) return null;
 
-    // 각 탭의 글로벌 위치를 확인하여 드래그 위치와 비교
-    for (int i = 0; i < tabKeys.length; i++) {
-      final key = tabKeys[i];
-      final renderBox = key.currentContext?.findRenderObject() as RenderBox?;
+    final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
+    final fixedTabCount = allTabs.where((tab) => !tab.isClosable).length;
+
+    // 드래그 가능한 탭들의 위치 확인
+    for (int i = 0; i < draggableTabs.length; i++) {
+      final tab = draggableTabs[i];
+      final key = tabKeys[tab.id];
+      final renderBox = key?.currentContext?.findRenderObject() as RenderBox?;
 
       if (renderBox != null) {
         final tabPosition = renderBox.localToGlobal(Offset.zero);
         final tabSize = renderBox.size;
 
-        // 드래그 위치가 탭의 왼쪽 절반에 있으면 해당 인덱스
-        // 오른쪽 절반에 있으면 다음 인덱스
+        // 마우스가 이 탭 영역 위에 있는지 확인
         if (globalPosition.dx >= tabPosition.dx &&
             globalPosition.dx <= tabPosition.dx + tabSize.width) {
-          final isLeftHalf =
-              globalPosition.dx < tabPosition.dx + (tabSize.width / 2);
-          return isLeftHalf ? i : i + 1;
+          // 전체 탭 리스트에서의 실제 인덱스 반환
+          return fixedTabCount + i;
         }
       }
     }

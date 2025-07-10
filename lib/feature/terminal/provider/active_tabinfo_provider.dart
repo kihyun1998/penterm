@@ -7,14 +7,11 @@ import 'tab_provider.dart';
 
 part 'active_tabinfo_provider.g.dart';
 
-@riverpod
+@Riverpod(dependencies: [ActiveTab, TabList])
 TabInfo? activeTabInfo(Ref ref) {
   final activeTabId = ref.watch(activeTabProvider);
-  final tabList = ref.watch(tabListProvider);
+  final tabMap = ref.watch(tabListProvider);
 
-  try {
-    return tabList.firstWhere((tab) => tab.id == activeTabId);
-  } catch (e) {
-    return null;
-  }
+  // Map에서 직접 탭 정보 반환
+  return tabMap[activeTabId];
 }
