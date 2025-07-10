@@ -143,4 +143,60 @@ class TabList extends _$TabList {
 
     state = updatedTabs;
   }
+
+  /// order 기반 탭 순서 변경 (새로운 드래그 앤 드롭용)
+  void reorderTabByOrder(String tabId, int fromOrder, int toOrder) {
+    final currentTabs = Map<String, TabInfo>.from(state);
+    final tabToMove = currentTabs[tabId];
+
+    if (tabToMove == null || !tabToMove.isClosable) {
+      print('❌ Cannot reorder: tab not found or not closable');
+      return;
+    }
+
+    print('🔧 Reordering $tabId from order $fromOrder to order $toOrder');
+
+    // 순서대로 정렬된 탭 리스트
+    final sortedTabs = currentTabs.values.toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    final updatedTabs = <String, TabInfo>{};
+
+    // 모든 탭의 새로운 order 계산
+    for (final tab in sortedTabs) {
+      if (tab.id == tabId) {
+        // 드래그 중인 탭은 타겟 order로 설정
+        updatedTabs[tab.id] = tab.copyWith(order: toOrder);
+        print('  └─ ${tab.name}: ${tab.order} → $toOrder (moved)');
+      } else if (fromOrder < toOrder) {
+        // 뒤로 이동하는 경우: 중간 탭들을 앞으로 이동
+        if (tab.order > fromOrder && tab.order <= toOrder) {
+          final newOrder = tab.order - 1;
+          updatedTabs[tab.id] = tab.copyWith(order: newOrder);
+          print('  └─ ${tab.name}: ${tab.order} → $newOrder (shifted left)');
+        } else {
+          updatedTabs[tab.id] = tab; // 변경 없음
+          print('  └─ ${tab.name}: ${tab.order} (no change)');
+        }
+      } else {
+        // 앞으로 이동하는 경우: 중간 탭들을 뒤로 이동
+        if (tab.order >= toOrder && tab.order < fromOrder) {
+          final newOrder = tab.order + 1;
+          updatedTabs[tab.id] = tab.copyWith(order: newOrder);
+          print('  └─ ${tab.name}: ${tab.order} → $newOrder (shifted right)');
+        } else {
+          updatedTabs[tab.id] = tab; // 변경 없음
+          print('  └─ ${tab.name}: ${tab.order} (no change)');
+        }
+      }
+    }
+
+    state = updatedTabs;
+
+    // 결과 확인
+    final resultTabs = updatedTabs.values.toList()
+      ..sort((a, b) => a.order.compareTo(b.order));
+    print(
+        '📋 Final order: ${resultTabs.map((tab) => '${tab.name}(${tab.order})').join(', ')}');
+  }
 }

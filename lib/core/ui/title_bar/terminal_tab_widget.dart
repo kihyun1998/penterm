@@ -53,14 +53,13 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
         final dragState = ref.read(tabDragProvider);
 
         if (dragState.targetOrder != null) {
-          print('📋 Would move to order ${dragState.targetOrder}');
+          print('📋 Target found - will be handled by TabDropZone');
+          // TabDropZone에서 endDrag()를 호출할 것임
         } else {
-          print(
-              '📋 Would return to original position (order ${widget.tab.order})');
+          print('📋 No target - returning to original position');
+          // 드롭 영역 밖에서 끝난 경우 원래 자리로 복귀
+          ref.read(tabDragProvider.notifier).cancelDrag();
         }
-
-        // 실제 이동은 하지 않고 드래그만 종료
-        ref.read(tabDragProvider.notifier).cancelDrag();
       },
       onDraggableCanceled: (velocity, offset) {
         print('❌ Drag canceled: ${widget.tab.name}');

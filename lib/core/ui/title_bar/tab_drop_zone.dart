@@ -70,7 +70,7 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
         // 타겟을 null로 설정하지는 않음 (다른 영역으로 이동할 수 있음)
       },
       onAcceptWithDetails: (draggedTab) {
-        // 실제 드롭이 발생했을 때 - 아직 실제 이동은 하지 않음
+        // 실제 드롭이 발생했을 때 - 이제 실제 이동 수행
         if (draggedTab.data.order == widget.targetOrder) {
           print(
               '🔄 Dropped on self: ${widget.targetTabName} (return to original position)');
@@ -79,13 +79,11 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
           print(
               '🎯 Dropped on zone: ${widget.targetTabName} (order ${widget.targetOrder})');
           print(
-              '📋 This will move ${draggedTab.data.name} from order ${draggedTab.data.order} to order ${widget.targetOrder}');
+              '📋 Moving ${draggedTab.data.name} from order ${draggedTab.data.order} to order ${widget.targetOrder}');
         }
 
-        // 실제 이동은 하지 않고 드래그만 종료
-        ref
-            .read(tabDragProvider.notifier)
-            .cancelDrag(); // endDrag() 대신 cancelDrag()
+        // 실제 이동 수행
+        ref.read(tabDragProvider.notifier).endDrag();
         setState(() => _isHovered = false);
       },
       builder: (context, candidateData, rejectedData) {

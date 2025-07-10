@@ -96,9 +96,12 @@ class TabDrag extends _$TabDrag {
     print(
         '📋 Expected result: ${expectedOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}');
 
-    // 실제 순서 변경 (targetOrder가 있는 경우만)
-    if (targetOrder != null) {
-      _applyReorder(draggingTab.id, targetOrder);
+    // 실제 순서 변경 적용
+    if (targetOrder != null && targetOrder != draggingTab.order) {
+      print('🔄 Applying order change...');
+      _applyOrderChange(draggingTab.id, draggingTab.order, targetOrder);
+    } else {
+      print('📌 No order change needed');
     }
 
     // 드래그 상태 초기화
@@ -114,27 +117,16 @@ class TabDrag extends _$TabDrag {
   }
 
   /// 실제 탭 순서 변경 적용 (order 기반)
-  void _applyReorder(String tabId, int targetOrder) {
+  void _applyOrderChange(String draggingTabId, int fromOrder, int toOrder) {
     final tabListNotifier = ref.read(tabListProvider.notifier);
 
-    // 현재 전체 탭 맵 가져오기
-    final currentTabMap = ref.read(tabListProvider);
-    final allTabs = currentTabMap.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
+    print(
+        '🔧 Order change: $draggingTabId from order $fromOrder to order $toOrder');
 
-    // 고정 탭들의 최대 order 계산
-    final fixedTabs = allTabs.where((tab) => !tab.isClosable);
-    final maxFixedOrder = fixedTabs.isNotEmpty
-        ? fixedTabs.map((tab) => tab.order).reduce((a, b) => a > b ? a : b)
-        : -1;
+    // 새로운 order 기반 메서드 호출
+    tabListNotifier.reorderTabByOrder(draggingTabId, fromOrder, toOrder);
 
-    // 전체 탭 리스트에서의 실제 타겟 order 계산
-    final actualTargetOrder = maxFixedOrder + 1 + targetOrder;
-
-    print('🔄 Applying reorder: $tabId to order $actualTargetOrder');
-
-    // 임시로 기존 reorderTab 메서드 사용 (나중에 order 기반으로 수정 필요)
-    tabListNotifier.reorderTab(tabId, actualTargetOrder);
+    print('✅ Order change applied successfully');
   }
 
   /// 디버그 정보 출력
