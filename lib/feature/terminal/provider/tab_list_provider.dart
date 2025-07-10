@@ -73,4 +73,42 @@ class TabList extends _$TabList {
       return tab;
     }).toList();
   }
+
+  /// 탭 순서 변경 (드래그 앤 드롭용)
+  void reorderTab(String tabId, int targetIndex) {
+    final currentTabs = List<TabInfo>.from(state);
+
+    // 이동할 탭 찾기
+    final sourceIndex = currentTabs.indexWhere((tab) => tab.id == tabId);
+    if (sourceIndex == -1) return;
+
+    final tabToMove = currentTabs[sourceIndex];
+
+    // 고정 탭은 이동할 수 없음
+    if (!tabToMove.isClosable) return;
+
+    // 고정 탭 개수 계산 (HOME, SFTP)
+    final fixedTabCount = currentTabs.where((tab) => !tab.isClosable).length;
+
+    // 타겟 인덱스는 고정 탭 이후여야 함
+    final adjustedTargetIndex =
+        targetIndex < fixedTabCount ? fixedTabCount : targetIndex;
+
+    // 범위 체크
+    if (adjustedTargetIndex < 0 || adjustedTargetIndex > currentTabs.length) {
+      return;
+    }
+
+    // 탭 이동
+    currentTabs.removeAt(sourceIndex);
+
+    // 삽입 위치 조정 (원본이 제거되었으므로)
+    final insertIndex = adjustedTargetIndex > sourceIndex
+        ? adjustedTargetIndex - 1
+        : adjustedTargetIndex;
+
+    currentTabs.insert(insertIndex, tabToMove);
+
+    state = currentTabs;
+  }
 }
