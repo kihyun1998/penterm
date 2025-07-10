@@ -3,8 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../feature/terminal/model/tab_info.dart';
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
@@ -21,9 +19,6 @@ class AppTitleBar extends ConsumerStatefulWidget {
 }
 
 class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
-  // 각 터미널 탭의 GlobalKey를 저장하는 맵
-  final Map<String, GlobalKey> _tabKeys = {};
-
   @override
   void initState() {
     super.initState();
@@ -48,34 +43,17 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   @override
   void onWindowMaximize() {
     ref.read(isWindowMaximizedProvider.notifier).setMaximized(true);
-    // 🚀 setState() 없음 - 전체 위젯 rebuild 없음!
   }
 
   @override
   void onWindowUnmaximize() {
     ref.read(isWindowMaximizedProvider.notifier).setMaximized(false);
-    // 🚀 setState() 없음 - 전체 위젯 rebuild 없음!
-  }
-
-  /// 터미널 탭의 GlobalKey를 가져오거나 생성
-  GlobalKey _getTabKey(String tabId) {
-    if (!_tabKeys.containsKey(tabId)) {
-      _tabKeys[tabId] = GlobalKey();
-    }
-    return _tabKeys[tabId]!;
-  }
-
-  /// 사용하지 않는 TabKey 정리
-  void _cleanupTabKeys(List<TabInfo> currentTabs) {
-    final currentTabIds = currentTabs.map((tab) => tab.id).toSet();
-    _tabKeys.removeWhere((key, value) => !currentTabIds.contains(key));
   }
 
   @override
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
     final tabMap = ref.watch(tabListProvider);
-    final dragState = ref.watch(tabDragProvider);
 
     // Map에서 직접 처리 - order 순으로 정렬
     final allTabs = tabMap.values.toList();
@@ -84,9 +62,6 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
     // 필터링
     final fixedTabs = allTabs.where((tab) => !tab.isClosable).toList();
     final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
-
-    // 사용하지 않는 TabKey 정리
-    _cleanupTabKeys(allTabs);
 
     return Container(
       height: 50,
@@ -121,37 +96,16 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     color: ref.color.border,
                   ),
 
-                // 🖥️ 드래그 가능한 터미널 탭들 - 전체를 하나의 DragTarget으로 감싸서 실시간 추적
+                // 🖥️ 터미널 탭들
                 if (draggableTabs.isNotEmpty)
-                  DragTarget<TabInfo>(
-                    onWillAcceptWithDetails: (data) {
-                      // 드래그 중인 데이터가 유효한지 확인
-                      return draggableTabs.any((tab) => tab.id == data.data.id);
-                    },
-                    onMove: (details) {
-                      // 실시간으로 드래그 위치 추적하여 타겟 인덱스 계산
-                      ref.read(tabDragProvider.notifier).onDragMove(
-                            details.offset,
-                            tabMap,
-                            _tabKeys,
-                          );
-                    },
-                    onAcceptWithDetails: (draggedTab) {
-                      // 최종 드롭 시 실제 순서 변경
-                      ref.read(tabDragProvider.notifier).endDrag();
-                    },
-                    builder: (context, candidateData, rejectedData) {
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: draggableTabs.map((tab) {
-                          return TerminalTabWidget(
-                            tab: tab,
-                            activeTabId: activeTabId,
-                            tabKey: _getTabKey(tab.id),
-                          );
-                        }).toList(),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: draggableTabs.map((tab) {
+                      return TerminalTabWidget(
+                        tab: tab,
+                        activeTabId: activeTabId,
                       );
-                    },
+                    }).toList(),
                   ),
 
                 // + 버튼 (탭 추가)
@@ -234,38 +188,6 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
               ],
             ),
           ),
-
-          // 🎯 드래그 상태 디버그 정보 (개발 중에만)
-          if (dragState.isDragging)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                color: Colors.black87,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Dragging: ${dragState.draggingTabId}',
-                      style: const TextStyle(color: Colors.white, fontSize: 10),
-                    ),
-                    Text(
-                      'Target Index: ${dragState.targetIndex ?? "None"}',
-                      style: const TextStyle(color: Colors.white, fontSize: 10),
-                    ),
-                    if (dragState.targetIndex != null &&
-                        dragState.targetIndex! < allTabs.length)
-                      Text(
-                        'Target Tab: ${allTabs[dragState.targetIndex!].name}',
-                        style:
-                            const TextStyle(color: Colors.yellow, fontSize: 10),
-                      ),
-                  ],
-                ),
-              ),
-            ),
         ],
       ),
     );
