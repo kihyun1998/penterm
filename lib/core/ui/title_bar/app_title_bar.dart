@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../feature/terminal/model/tab_info.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 import '../app_icon_tab.dart';
 import 'provider/is_window_maximized_provider.dart';
+import 'terminal_tab_widget.dart';
 
 class AppTitleBar extends ConsumerStatefulWidget {
   const AppTitleBar({super.key});
@@ -92,10 +92,13 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                   color: ref.color.border,
                 ),
 
-                // 🖥️ 동적 탭들 (Terminal 등)
+                // 🖥️ 동적 탭들 (Terminal 등) - 새로운 위젯 사용
                 ...tabList
                     .where((tab) => tab.isClosable)
-                    .map((tab) => _buildDynamicTab(tab, activeTabId)),
+                    .map((tab) => TerminalTabWidget(
+                          tab: tab,
+                          activeTabId: activeTabId,
+                        )),
 
                 // + 버튼 (탭 추가)
                 AppIconButton(
@@ -182,85 +185,6 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                   ],
                 ),
               ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 동적 탭 빌드 (닫기 버튼 포함)
-  Widget _buildDynamicTab(TabInfo tab, String activeTabId) {
-    final isActive = activeTabId == tab.id;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 탭 본체
-          GestureDetector(
-            onTap: () => ref.read(activeTabProvider.notifier).setTab(tab.id),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? ref.color.primarySoft
-                    : ref.color.surfaceVariantSoft,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(6),
-                  topRight: Radius.circular(6),
-                ),
-                border: isActive
-                    ? Border(
-                        bottom: BorderSide(
-                          color: ref.color.primary,
-                          width: 2,
-                        ),
-                      )
-                    : null,
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 탭 아이콘 (터미널)
-                  Icon(
-                    Icons.terminal,
-                    size: 14,
-                    color: isActive
-                        ? ref.color.primary
-                        : ref.color.onBackgroundSoft,
-                  ),
-                  const SizedBox(width: 6),
-                  // 탭 이름
-                  Text(
-                    tab.name,
-                    style: ref.font.semiBoldText12.copyWith(
-                      color: isActive
-                          ? ref.color.primary
-                          : ref.color.onBackgroundSoft,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // 닫기 버튼
-                  GestureDetector(
-                    onTap: () =>
-                        ref.read(tabListProvider.notifier).removeTab(tab.id),
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(2),
-                        color: Colors.transparent,
-                      ),
-                      child: Icon(
-                        Icons.close,
-                        size: 12,
-                        color: ref.color.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],

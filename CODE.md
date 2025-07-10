@@ -33,7 +33,8 @@ penterm/
         │   ├── title_bar/
         │   │   ├── provider/
         │   │   │   └── is_window_maximized_provider.dart
-        │   │   └── app_title_bar.dart
+        │   │   ├── app_title_bar.dart
+        │   │   └── terminal_tab_widget.dart
         │   ├── app_button.dart
         │   ├── app_icon_button.dart
         │   └── app_icon_tab.dart
@@ -52,9 +53,15 @@ penterm/
     ├── feature/
         └── terminal/
         │   ├── model/
-        │       └── enum_tab_type.dart
+        │       ├── enum_tab_type.dart
+        │       └── tab_info.dart
         │   └── provider/
+        │       ├── active_tabinfo_provider.dart
+        │       ├── tab_list_provider.dart
         │       └── tab_provider.dart
+    ├── page/
+        ├── example_heme.dart
+        └── main_page.dart
     └── main.dart
 ```
 
@@ -2279,12 +2286,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../feature/terminal/model/enum_tab_type.dart';
+import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 import '../app_icon_tab.dart';
 import 'provider/is_window_maximized_provider.dart';
+import 'terminal_tab_widget.dart';
 
 class AppTitleBar extends ConsumerStatefulWidget {
   const AppTitleBar({super.key});
@@ -2329,7 +2337,8 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
 
   @override
   Widget build(BuildContext context) {
-    final activeTab = ref.watch(activeTabProvider);
+    final activeTabId = ref.watch(activeTabProvider);
+    final tabList = ref.watch(tabListProvider);
 
     return Container(
       height: 50,
@@ -2346,22 +2355,65 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                // 🏠 HOME 탭
-                AppIconTab(
-                  text: TabType.home.displayName,
-                  isActive: activeTab == TabType.home,
-                  onPressed: () =>
-                      ref.read(activeTabProvider.notifier).goToHome(),
+                // 🏠 고정 탭들 (HOME, SFTP)
+                ...tabList
+                    .where((tab) => !tab.isClosable)
+                    .map((tab) => AppIconTab(
+                          text: tab.name,
+                          isActive: activeTabId == tab.id,
+                          onPressed: () => ref
+                              .read(activeTabProvider.notifier)
+                              .setTab(tab.id),
+                        )),
+
+                // 구분선
+                Container(
+                  margin:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                  width: 1,
+                  height: double.infinity,
+                  color: ref.color.border,
                 ),
 
-                const SizedBox(width: 4),
+                // 🖥️ 동적 탭들 (Terminal 등) - 새로운 위젯 사용
+                ...tabList
+                    .where((tab) => tab.isClosable)
+                    .map((tab) => TerminalTabWidget(
+                          tab: tab,
+                          activeTabId: activeTabId,
+                        )),
 
-                // 📁 SFTP 탭
-                AppIconTab(
-                  text: TabType.sftp.displayName,
-                  isActive: activeTab == TabType.sftp,
-                  onPressed: () =>
-                      ref.read(activeTabProvider.notifier).goToSftp(),
+                // + 버튼 (탭 추가)
+                AppIconButton(
+                  width: 30,
+                  height: 30,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  backgroundColor: Colors.transparent,
+                  hoverColor: ref.color.hover,
+                  borderRadius: BorderRadius.circular(4),
+                  onPressed: () {
+                    ref.read(tabListProvider.notifier).addTerminalTab();
+                  },
+                  icon: SVGAsset.plus,
+                  iconColor: ref.color.onSurfaceVariant,
+                  iconSize: 14,
+                ),
+
+                // ... 버튼 (오버플로우 메뉴)
+                AppIconButton(
+                  width: 30,
+                  height: 30,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  backgroundColor: Colors.transparent,
+                  hoverColor: ref.color.hover,
+                  borderRadius: BorderRadius.circular(4),
+                  onPressed: () {
+                    print('오버플로우 메뉴 클릭');
+                  },
+                  icon: SVGAsset
+                      .elipsisVertical, // 임시로 minimize 아이콘 사용 (... 아이콘 없음)
+                  iconColor: ref.color.onSurfaceVariant,
+                  iconSize: 14,
                 ),
 
                 // 🌌 중간 빈 공간
@@ -2464,6 +2516,132 @@ class IsWindowMaximized extends _$IsWindowMaximized {
       // 에러 시 기본값 유지
       print('윈도우 최대화 상태 로드 실패: $e');
     }
+  }
+}
+
+```
+## lib/core/ui/title_bar/terminal_tab_widget.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:penterm/core/theme/provider/theme_provider.dart';
+
+import '../../../feature/terminal/model/tab_info.dart';
+import '../../../feature/terminal/provider/tab_list_provider.dart';
+import '../../../feature/terminal/provider/tab_provider.dart';
+import '../../util/svg/model/enum_svg_asset.dart';
+import '../app_icon_button.dart';
+
+class TerminalTabWidget extends ConsumerStatefulWidget {
+  final TabInfo tab;
+  final String activeTabId;
+
+  const TerminalTabWidget({
+    super.key,
+    required this.tab,
+    required this.activeTabId,
+  });
+
+  @override
+  ConsumerState<TerminalTabWidget> createState() => _TerminalTabWidgetState();
+}
+
+class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = widget.activeTabId == widget.tab.id;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTap: () =>
+              ref.read(activeTabProvider.notifier).setTab(widget.tab.id),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isActive
+                  ? ref.color.primarySoft
+                  : ref.color.surfaceVariantSoft,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(6),
+                topRight: Radius.circular(6),
+              ),
+              border: isActive
+                  ? Border(
+                      bottom: BorderSide(
+                        color: ref.color.primary,
+                        width: 2,
+                      ),
+                    )
+                  : null,
+            ),
+            child: Stack(
+              children: [
+                // 기본 탭 내용 (패딩 적용)
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // 탭 아이콘 (터미널)
+                      Icon(
+                        Icons.terminal,
+                        size: 14,
+                        color: isActive
+                            ? ref.color.primary
+                            : ref.color.onBackgroundSoft,
+                      ),
+                      const SizedBox(width: 6),
+                      // 탭 이름
+                      Text(
+                        widget.tab.name,
+                        style: ref.font.semiBoldText12.copyWith(
+                          color: isActive
+                              ? ref.color.primary
+                              : ref.color.onBackgroundSoft,
+                        ),
+                      ),
+                      const SizedBox(width: 16), // X 버튼 공간 확보
+                    ],
+                  ),
+                ),
+                // 닫기 버튼 - hover 시에만 표시, 우상단에 positioned
+                if (_isHovered)
+                  Positioned(
+                    top: 0,
+                    bottom: 0,
+                    right: 2,
+                    child: Center(
+                      child: AppIconButton(
+                        width: 16,
+                        height: 16,
+                        backgroundColor: isActive
+                            ? ref.color.primarySoft
+                            : ref.color.surfaceVariantSoft,
+                        hoverColor: ref.color.hover,
+                        borderRadius: BorderRadius.circular(4),
+                        onPressed: () => ref
+                            .read(tabListProvider.notifier)
+                            .removeTab(widget.tab.id),
+                        icon: SVGAsset.windowClose,
+                        iconColor: isActive
+                            ? ref.color.primary
+                            : ref.color.onSurfaceVariant,
+                        iconSize: 8,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -2677,6 +2855,10 @@ enum ColorTarget {
 enum SVGAsset {
   theme("assets/icons/ico_theme.svg"),
   language("assets/icons/ico_language.svg"),
+  plus("assets/icons/ico_plus.svg"),
+  elipsisVertical("assets/icons/ico_elipsis_vertical.svg"),
+
+  /// title bar
   windowClose('assets/icons/titlebar/ico_window_close.svg'),
   windowMinimize('assets/icons/titlebar/ico_window_minimize.svg'),
   windowMaximize('assets/icons/titlebar/ico_window_maximize.svg'),
@@ -2958,7 +3140,8 @@ class SVGIcon extends StatelessWidget {
 ```dart
 enum TabType {
   home('home'),
-  sftp('sftp');
+  sftp('sftp'),
+  terminal('terminal');
 
   const TabType(this.value);
 
@@ -2971,6 +3154,8 @@ enum TabType {
         return 'HOME';
       case TabType.sftp:
         return 'SFTP';
+      case TabType.terminal:
+        return 'Terminal';
     }
   }
 
@@ -2981,6 +3166,8 @@ enum TabType {
         return 'home';
       case TabType.sftp:
         return 'folder';
+      case TabType.terminal:
+        return 'terminal';
     }
   }
 
@@ -2997,6 +3184,144 @@ enum TabType {
 }
 
 ```
+## lib/feature/terminal/model/tab_info.dart
+```dart
+import 'enum_tab_type.dart';
+
+/// 개별 탭 정보를 담는 클래스
+class TabInfo {
+  final String id;
+  final TabType type;
+  final String name;
+  final bool isClosable;
+
+  const TabInfo({
+    required this.id,
+    required this.type,
+    required this.name,
+    this.isClosable = true,
+  });
+
+  TabInfo copyWith({
+    String? id,
+    TabType? type,
+    String? name,
+    bool? isClosable,
+  }) {
+    return TabInfo(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      name: name ?? this.name,
+      isClosable: isClosable ?? this.isClosable,
+    );
+  }
+}
+
+```
+## lib/feature/terminal/provider/active_tabinfo_provider.dart
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../model/tab_info.dart';
+import 'tab_list_provider.dart';
+import 'tab_provider.dart';
+
+part 'active_tabinfo_provider.g.dart';
+
+@riverpod
+TabInfo? activeTabInfo(Ref ref) {
+  final activeTabId = ref.watch(activeTabProvider);
+  final tabList = ref.watch(tabListProvider);
+
+  try {
+    return tabList.firstWhere((tab) => tab.id == activeTabId);
+  } catch (e) {
+    return null;
+  }
+}
+
+```
+## lib/feature/terminal/provider/tab_list_provider.dart
+```dart
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../model/enum_tab_type.dart';
+import '../model/tab_info.dart';
+import 'tab_provider.dart';
+
+part 'tab_list_provider.g.dart';
+
+@Riverpod(dependencies: [ActiveTab])
+class TabList extends _$TabList {
+  @override
+  List<TabInfo> build() {
+    return [
+      TabInfo(
+        id: TabType.home.value,
+        type: TabType.home,
+        name: TabType.home.displayName,
+        isClosable: false,
+      ),
+      TabInfo(
+        id: TabType.sftp.value,
+        type: TabType.sftp,
+        name: TabType.sftp.displayName,
+        isClosable: false,
+      ),
+    ];
+  }
+
+  /// 새 터미널 탭 추가
+  void addTerminalTab() {
+    final currentTabs = state;
+    final terminalCount =
+        currentTabs.where((tab) => tab.type == TabType.terminal).length;
+
+    final newTabId = 'terminal_${DateTime.now().millisecondsSinceEpoch}';
+    final newTab = TabInfo(
+      id: newTabId,
+      type: TabType.terminal,
+      name: 'Terminal ${terminalCount + 1}',
+      isClosable: true,
+    );
+
+    state = [...currentTabs, newTab];
+
+    // 새로 추가된 탭으로 이동
+    ref.read(activeTabProvider.notifier).setTab(newTabId);
+  }
+
+  /// 탭 제거
+  void removeTab(String tabId) {
+    final currentTabs = state;
+    final tabToRemove = currentTabs.firstWhere((tab) => tab.id == tabId);
+
+    // 고정 탭은 제거할 수 없음
+    if (!tabToRemove.isClosable) return;
+
+    final newTabs = currentTabs.where((tab) => tab.id != tabId).toList();
+    state = newTabs;
+
+    // 제거된 탭이 현재 활성 탭이었다면 Home으로 이동
+    final activeTabId = ref.read(activeTabProvider);
+    if (activeTabId == tabId) {
+      ref.read(activeTabProvider.notifier).goToHome();
+    }
+  }
+
+  /// 탭 이름 변경
+  void renameTab(String tabId, String newName) {
+    state = state.map((tab) {
+      if (tab.id == tabId) {
+        return tab.copyWith(name: newName);
+      }
+      return tab;
+    }).toList();
+  }
+}
+
+```
 ## lib/feature/terminal/provider/tab_provider.dart
 ```dart
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -3008,28 +3333,23 @@ part 'tab_provider.g.dart';
 @riverpod
 class ActiveTab extends _$ActiveTab {
   @override
-  TabType build() {
-    return TabType.home; // 기본값: Home 탭
+  String build() {
+    return TabType.home.value; // 기본값: Home 탭
   }
 
   /// 특정 탭으로 전환
-  void setTab(TabType tabType) {
-    state = tabType;
+  void setTab(String tabId) {
+    state = tabId;
   }
 
   /// Home 탭으로 전환
   void goToHome() {
-    state = TabType.home;
+    state = TabType.home.value;
   }
 
   /// SFTP 탭으로 전환
   void goToSftp() {
-    state = TabType.sftp;
-  }
-
-  /// 탭 토글 (Home ↔ SFTP)
-  void toggleTab() {
-    state = state == TabType.home ? TabType.sftp : TabType.home;
+    state = TabType.sftp.value;
   }
 }
 
@@ -3040,16 +3360,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:penterm/page/main_page.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'core/const/enum_hive_key.dart';
 import 'core/localization/generated/l10n.dart';
-import 'core/localization/provider/language_provider.dart';
 import 'core/localization/provider/locale_state_provider.dart';
 import 'core/theme/provider/theme_provider.dart';
-import 'core/ui/title_bar/app_title_bar.dart';
-import 'core/util/svg/model/enum_svg_asset.dart';
-import 'core/util/svg/widget/svg_icon.dart';
 
 void main() async {
   // Flutter 바인딩 초기화
@@ -3101,10 +3418,23 @@ class MyApp extends ConsumerWidget {
         const Locale('en'), // English
         const Locale('ko'), // Korean
       ],
-      home: const MyHome(),
+      home: const MainScreen(),
     );
   }
 }
+
+```
+## lib/page/example_heme.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../core/localization/provider/language_provider.dart';
+import '../core/localization/provider/locale_state_provider.dart';
+import '../core/theme/provider/theme_provider.dart';
+import '../core/ui/title_bar/app_title_bar.dart';
+import '../core/util/svg/model/enum_svg_asset.dart';
+import '../core/util/svg/widget/svg_icon.dart';
 
 class MyHome extends ConsumerWidget {
   const MyHome({super.key});
@@ -3279,6 +3609,151 @@ class MyHome extends ConsumerWidget {
               size: 20,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+```
+## lib/page/main_page.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:penterm/core/theme/provider/theme_provider.dart';
+
+import '../core/ui/title_bar/app_title_bar.dart';
+import '../feature/terminal/model/enum_tab_type.dart';
+import '../feature/terminal/model/tab_info.dart';
+import '../feature/terminal/provider/active_tabinfo_provider.dart';
+
+class MainScreen extends ConsumerWidget {
+  const MainScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeTabInfo = ref.watch(activeTabInfoProvider);
+
+    return Scaffold(
+      body: Column(
+        children: [
+          // 커스텀 타이틀바
+          const AppTitleBar(),
+
+          // 메인 콘텐츠 - AnimatedSwitcher로 교체
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: activeTabInfo != null
+                  ? _buildTabContent(activeTabInfo, ref)
+                  : _buildDefaultContent(ref),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabContent(TabInfo tabInfo, WidgetRef ref) {
+    switch (tabInfo.type) {
+      case TabType.home:
+        return Container(
+          key: const ValueKey('home'),
+          width: double.infinity,
+          color: Colors.red,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.home,
+                  size: 64,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'HOME TAB',
+                  style: ref.font.boldText24.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case TabType.sftp:
+        return Container(
+          key: const ValueKey('sftp'),
+          width: double.infinity,
+          color: Colors.blue,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.folder,
+                  size: 64,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'SFTP TAB',
+                  style: ref.font.boldText24.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+
+      case TabType.terminal:
+        return Container(
+          key: ValueKey(tabInfo.id),
+          width: double.infinity,
+          color: Colors.green,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.terminal,
+                  size: 64,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  tabInfo.name,
+                  style: ref.font.boldText24.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tab ID: ${tabInfo.id}',
+                  style: ref.font.regularText14.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+    }
+  }
+
+  Widget _buildDefaultContent(WidgetRef ref) {
+    return Container(
+      key: const ValueKey('default'),
+      width: double.infinity,
+      color: Colors.grey,
+      child: Center(
+        child: Text(
+          'No Active Tab',
+          style: ref.font.boldText24.copyWith(
+            color: Colors.white,
+          ),
         ),
       ),
     );
