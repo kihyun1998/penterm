@@ -3,71 +3,89 @@
 
 ```
 penterm/
-└── lib/
+├── lib/
     ├── core/
-        ├── const/
-        │   ├── enum_debounce_key.dart
-        │   └── enum_hive_key.dart
-        ├── localization/
-        │   ├── l10n/
-        │   │   ├── intl_en.arb
-        │   │   └── intl_ko.arb
-        │   └── provider/
-        │   │   ├── language_provider.dart
-        │   │   └── locale_state_provider.dart
-        ├── theme/
-        │   ├── foundation/
-        │   │   ├── app_color.dart
-        │   │   ├── app_font.dart
-        │   │   ├── app_mode.dart
-        │   │   └── app_theme.dart
-        │   ├── provider/
-        │   │   └── theme_provider.dart
-        │   ├── resources/
-        │   │   ├── dark_palette.dart
-        │   │   ├── font.dart
-        │   │   └── light_palette.dart
-        │   ├── dark_theme.dart
-        │   └── light_theme.dart
-        ├── ui/
-        │   ├── title_bar/
-        │   │   ├── provider/
-        │   │   │   └── is_window_maximized_provider.dart
-        │   │   ├── app_title_bar.dart
-        │   │   ├── tab_drop_zone.dart
-        │   │   └── terminal_tab_widget.dart
-        │   ├── app_button.dart
-        │   ├── app_icon_button.dart
-        │   └── app_icon_tab.dart
-        └── util/
-        │   ├── debounce/
-        │       ├── debounce_operation.dart
-        │       └── debounce_service.dart
-        │   └── svg/
-        │       ├── enum/
-        │           └── color_target.dart
-        │       ├── model/
-        │           └── enum_svg_asset.dart
-        │       ├── widget/
-        │           └── svg_icon.dart
-        │       └── svg_util.dart
+    │   ├── const/
+    │   │   ├── enum_debounce_key.dart
+    │   │   └── enum_hive_key.dart
+    │   ├── localization/
+    │   │   ├── l10n/
+    │   │   │   ├── intl_en.arb
+    │   │   │   └── intl_ko.arb
+    │   │   └── provider/
+    │   │   │   ├── language_provider.dart
+    │   │   │   └── locale_state_provider.dart
+    │   ├── theme/
+    │   │   ├── foundation/
+    │   │   │   ├── app_color.dart
+    │   │   │   ├── app_font.dart
+    │   │   │   ├── app_mode.dart
+    │   │   │   └── app_theme.dart
+    │   │   ├── provider/
+    │   │   │   └── theme_provider.dart
+    │   │   ├── resources/
+    │   │   │   ├── dark_palette.dart
+    │   │   │   ├── font.dart
+    │   │   │   └── light_palette.dart
+    │   │   ├── dark_theme.dart
+    │   │   └── light_theme.dart
+    │   ├── ui/
+    │   │   ├── title_bar/
+    │   │   │   ├── provider/
+    │   │   │   │   └── is_window_maximized_provider.dart
+    │   │   │   ├── app_title_bar.dart
+    │   │   │   ├── tab_drop_zone.dart
+    │   │   │   └── terminal_tab_widget.dart
+    │   │   ├── app_button.dart
+    │   │   ├── app_icon_button.dart
+    │   │   └── app_icon_tab.dart
+    │   └── util/
+    │   │   ├── debounce/
+    │   │       ├── debounce_operation.dart
+    │   │       └── debounce_service.dart
+    │   │   └── svg/
+    │   │       ├── enum/
+    │   │           └── color_target.dart
+    │   │       ├── model/
+    │   │           └── enum_svg_asset.dart
+    │   │       ├── widget/
+    │   │           └── svg_icon.dart
+    │   │       └── svg_util.dart
     ├── feature/
-        └── terminal/
-        │   ├── model/
-        │       ├── enum_tab_type.dart
-        │       ├── tab_drag_state.dart
-        │       └── tab_info.dart
-        │   └── provider/
-        │       ├── active_tabinfo_provider.dart
-        │       ├── tab_drag_provider.dart
-        │       ├── tab_list_provider.dart
-        │       └── tab_provider.dart
+    │   └── terminal/
+    │   │   ├── model/
+    │   │       ├── enum_tab_type.dart
+    │   │       ├── tab_drag_state.dart
+    │   │       └── tab_info.dart
+    │   │   └── provider/
+    │   │       ├── active_tabinfo_provider.dart
+    │   │       ├── tab_drag_provider.dart
+    │   │       ├── tab_list_provider.dart
+    │   │       └── tab_provider.dart
     ├── page/
-        ├── example_heme.dart
-        └── main_page.dart
+    │   ├── example_heme.dart
+    │   └── main_page.dart
     └── main.dart
+└── function.md
 ```
 
+## function.md
+```md
+1. mobaXterm 같은 버전 
+    - 탭 추가/제거
+    - cli로 탭 추가/제거 (id로 관리)
+    - 탭 분할 (드래그 앤 드롭)
+    - cli로 분할된 탭에 관여
+    - ssh,sftp 접속 (비밀번호, ssh key 접속)
+    - cli로 비밀번호 ssh key 접속
+    - 검색
+    - local terminal
+
+2. putty 같은 버전
+    - 기본 실행 시 local terminal
+    - ssh 접속
+    - ssh password/sshkey 접속 cli 지원
+```
 ## lib/core/const/enum_debounce_key.dart
 ```dart
 enum DebounceKey {

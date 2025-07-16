@@ -29,10 +29,14 @@ class SplitDropZone extends ConsumerStatefulWidget {
   /// 현재 활성 터미널 탭 정보
   final TabInfo currentTab;
 
+  /// hover 상태 변경 콜백
+  final Function(SplitDirection? direction) onHoverChanged;
+
   const SplitDropZone({
     super.key,
     required this.direction,
     required this.currentTab,
+    required this.onHoverChanged,
   });
 
   @override
@@ -53,32 +57,37 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
       onMove: (details) {
         if (!_isHovered) {
           setState(() => _isHovered = true);
+          widget.onHoverChanged(widget.direction); // 상위에 hover 상태 알림
           _logSplitDetection();
         }
       },
       onLeave: (data) {
-        setState(() => _isHovered = false);
+        if (_isHovered) {
+          setState(() => _isHovered = false);
+          widget.onHoverChanged(null); // hover 해제 알림
+        }
       },
       onAcceptWithDetails: (draggedTab) {
-        // 1단계에서는 실제 분할 처리하지 않음
+        // 2단계에서는 실제 분할 처리하지 않음
         print(
             '🎯 Split drop accepted: ${draggedTab.data.name} → ${widget.direction.name}');
         setState(() => _isHovered = false);
+        widget.onHoverChanged(null); // hover 해제
       },
       builder: (context, candidateData, rejectedData) {
         return Container(
           decoration: BoxDecoration(
             color: _isHovered
-                ? _getDirectionColor().withOpacity(0.3)
+                ? _getDirectionColor().withOpacity(0.1)
                 : Colors.transparent,
             border: _isHovered
                 ? Border.all(
                     color: _getDirectionColor(),
-                    width: 2,
+                    width: 1,
                   )
                 : Border.all(
-                    color: Colors.white.withOpacity(0.2), // 영역 구분용 경계선
-                    width: 1,
+                    color: Colors.white.withOpacity(0.1), // 영역 구분용 경계선
+                    width: 0.5,
                   ),
             borderRadius: BorderRadius.circular(4),
           ),
@@ -89,13 +98,13 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
                     children: [
                       Icon(
                         _getDirectionIcon(),
-                        size: 32,
+                        size: 16,
                         color: _getDirectionColor(),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       Text(
-                        '${_getDirectionText()} Split',
-                        style: ref.font.semiBoldText14.copyWith(
+                        _getDirectionText(),
+                        style: ref.font.regularText10.copyWith(
                           color: _getDirectionColor(),
                         ),
                       ),
@@ -105,8 +114,8 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
               : Center(
                   child: Text(
                     _getDirectionText(),
-                    style: ref.font.regularText12.copyWith(
-                      color: Colors.white.withOpacity(0.5),
+                    style: ref.font.regularText10.copyWith(
+                      color: Colors.white.withOpacity(0.3),
                     ),
                   ),
                 ),
