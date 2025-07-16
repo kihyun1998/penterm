@@ -7,6 +7,7 @@ import '../feature/terminal/model/enum_tab_type.dart';
 import '../feature/terminal/model/tab_info.dart';
 import '../feature/terminal/provider/active_tabinfo_provider.dart';
 import '../feature/terminal/provider/tab_drag_provider.dart';
+import '../feature/terminal/ui/split_drop_zone.dart';
 
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
@@ -152,10 +153,24 @@ class MainScreen extends ConsumerWidget {
         );
 
       case TabType.terminal:
-        return Container(
-          key: ValueKey(tabInfo.id),
+        return _buildTerminalContent(tabInfo, ref);
+    }
+  }
+
+  Widget _buildTerminalContent(TabInfo tabInfo, WidgetRef ref) {
+    final dragState = ref.watch(tabDragProvider);
+
+    // 터미널 탭이 드래그 중인지 확인
+    final isTerminalDragging =
+        dragState.isDragging && dragState.draggingTab?.type.value == 'terminal';
+
+    return Stack(
+      key: ValueKey(tabInfo.id),
+      children: [
+        // 기본 터미널 컨텐츠
+        Container(
           width: double.infinity,
-          color: Colors.green,
+          color: ref.theme.color.secondaryVariant, // secondaryVariant 색상 사용
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -182,8 +197,70 @@ class MainScreen extends ConsumerWidget {
               ],
             ),
           ),
-        );
-    }
+        ),
+
+        // 분할 드롭 영역들 (터미널 탭 드래그 중일 때만 표시)
+        if (isTerminalDragging)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final width = constraints.maxWidth;
+              final height = constraints.maxHeight;
+
+              return Stack(
+                children: [
+                  // 🔴 Left - 왼쪽 50% 전체
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    width: width * 0.5,
+                    height: height,
+                    child: SplitDropZone(
+                      direction: SplitDirection.left,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🟡 Right - 오른쪽 50% 전체
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    width: width * 0.5,
+                    height: height,
+                    child: SplitDropZone(
+                      direction: SplitDirection.right,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🟢 Top - 상단 50%, 좌우 25% 제외한 중앙 50%
+                  Positioned(
+                    left: width * 0.25,
+                    top: 0,
+                    width: width * 0.5,
+                    height: height * 0.5,
+                    child: SplitDropZone(
+                      direction: SplitDirection.top,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🔵 Bottom - 하단 50%, 좌우 25% 제외한 중앙 50%
+                  Positioned(
+                    left: width * 0.25,
+                    bottom: 0,
+                    width: width * 0.5,
+                    height: height * 0.5,
+                    child: SplitDropZone(
+                      direction: SplitDirection.bottom,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+      ],
+    );
   }
 
   Widget _buildDefaultContent(WidgetRef ref) {
