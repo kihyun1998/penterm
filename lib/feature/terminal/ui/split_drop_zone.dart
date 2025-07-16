@@ -5,10 +5,21 @@ import 'package:penterm/core/theme/provider/theme_provider.dart';
 import '../model/tab_info.dart';
 
 enum SplitDirection {
+  // 큰 분할 (4개)
   top,
   bottom,
   left,
   right,
+
+  // 작은 분할 (4개) - 중앙 영역의 모서리
+  topSmall,
+  bottomSmall,
+  leftSmall,
+  rightSmall,
+
+  // 중앙 분할 (2개) - 중앙의 중앙
+  topCenter,
+  bottomCenter,
 }
 
 class SplitDropZone extends ConsumerStatefulWidget {
@@ -108,12 +119,18 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
   Color _getDirectionColor() {
     switch (widget.direction) {
       case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
         return Colors.green;
       case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
         return Colors.blue;
       case SplitDirection.left:
+      case SplitDirection.leftSmall:
         return Colors.red;
       case SplitDirection.right:
+      case SplitDirection.rightSmall:
         return Colors.orange;
     }
   }
@@ -122,12 +139,18 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
   IconData _getDirectionIcon() {
     switch (widget.direction) {
       case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
         return Icons.vertical_align_top;
       case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
         return Icons.vertical_align_bottom;
       case SplitDirection.left:
+      case SplitDirection.leftSmall:
         return Icons.align_horizontal_left;
       case SplitDirection.right:
+      case SplitDirection.rightSmall:
         return Icons.align_horizontal_right;
     }
   }
@@ -143,6 +166,18 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         return 'Left';
       case SplitDirection.right:
         return 'Right';
+      case SplitDirection.topSmall:
+        return 'Top-S';
+      case SplitDirection.bottomSmall:
+        return 'Bot-S';
+      case SplitDirection.leftSmall:
+        return 'Left-S';
+      case SplitDirection.rightSmall:
+        return 'Right-S';
+      case SplitDirection.topCenter:
+        return 'Top-C';
+      case SplitDirection.bottomCenter:
+        return 'Bot-C';
     }
   }
 
@@ -150,9 +185,15 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
   void _logSplitDetection() {
     final emoji = {
       SplitDirection.top: '🟢',
+      SplitDirection.topSmall: '🟢',
+      SplitDirection.topCenter: '🟢',
       SplitDirection.bottom: '🔵',
+      SplitDirection.bottomSmall: '🔵',
+      SplitDirection.bottomCenter: '🔵',
       SplitDirection.left: '🔴',
+      SplitDirection.leftSmall: '🔴',
       SplitDirection.right: '🟡',
+      SplitDirection.rightSmall: '🟡',
     }[widget.direction];
 
     print(

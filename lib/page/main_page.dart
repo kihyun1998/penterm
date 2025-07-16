@@ -170,7 +170,7 @@ class MainScreen extends ConsumerWidget {
         // 기본 터미널 컨텐츠
         Container(
           width: double.infinity,
-          color: ref.theme.color.secondaryVariant, // secondaryVariant 색상 사용
+          color: ref.theme.color.secondaryVariant,
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -199,7 +199,7 @@ class MainScreen extends ConsumerWidget {
           ),
         ),
 
-        // 분할 드롭 영역들 (터미널 탭 드래그 중일 때만 표시)
+        // ========== 10개 분할 드롭 영역들 (터미널 탭 드래그 중일 때만 표시) ==========
         if (isTerminalDragging)
           LayoutBuilder(
             builder: (context, constraints) {
@@ -208,11 +208,13 @@ class MainScreen extends ConsumerWidget {
 
               return Stack(
                 children: [
-                  // 🔴 Left - 왼쪽 50% 전체
+                  // ============ 큰 분할 (4개) ============
+
+                  // 🔴 Left - 왼쪽 1/3 전체 높이
                   Positioned(
                     left: 0,
                     top: 0,
-                    width: width * 0.5,
+                    width: width / 3,
                     height: height,
                     child: SplitDropZone(
                       direction: SplitDirection.left,
@@ -220,11 +222,11 @@ class MainScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // 🟡 Right - 오른쪽 50% 전체
+                  // 🟡 Right - 오른쪽 1/3 전체 높이
                   Positioned(
-                    right: 0,
+                    left: width * 2 / 3,
                     top: 0,
-                    width: width * 0.5,
+                    width: width / 3,
                     height: height,
                     child: SplitDropZone(
                       direction: SplitDirection.right,
@@ -232,26 +234,102 @@ class MainScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // 🟢 Top - 상단 50%, 좌우 25% 제외한 중앙 50%
+                  // 🟢 Top - 상단 1/3, 중앙 1/3 너비
                   Positioned(
-                    left: width * 0.25,
+                    left: width / 3,
                     top: 0,
-                    width: width * 0.5,
-                    height: height * 0.5,
+                    width: width / 3,
+                    height: height / 3,
                     child: SplitDropZone(
                       direction: SplitDirection.top,
                       currentTab: tabInfo,
                     ),
                   ),
 
-                  // 🔵 Bottom - 하단 50%, 좌우 25% 제외한 중앙 50%
+                  // 🔵 Bottom - 하단 1/3, 중앙 1/3 너비
                   Positioned(
-                    left: width * 0.25,
-                    bottom: 0,
-                    width: width * 0.5,
-                    height: height * 0.5,
+                    left: width / 3,
+                    top: height * 2 / 3,
+                    width: width / 3,
+                    height: height / 3,
                     child: SplitDropZone(
                       direction: SplitDirection.bottom,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // ============ 작은 분할 (4개) - 중앙 영역의 모서리 ============
+
+                  // 🔴 Left-Small - 중앙 영역의 왼쪽 1/3
+                  Positioned(
+                    left: width / 3,
+                    top: height / 3,
+                    width: width / 9,
+                    height: height / 3,
+                    child: SplitDropZone(
+                      direction: SplitDirection.leftSmall,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🟡 Right-Small - 중앙 영역의 오른쪽 1/3
+                  Positioned(
+                    left: width * 5 / 9,
+                    top: height / 3,
+                    width: width / 9,
+                    height: height / 3,
+                    child: SplitDropZone(
+                      direction: SplitDirection.rightSmall,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🟢 Top-Small - 중앙 영역의 상단 1/3
+                  Positioned(
+                    left: width * 4 / 9,
+                    top: height / 3,
+                    width: width / 9,
+                    height: height / 9,
+                    child: SplitDropZone(
+                      direction: SplitDirection.topSmall,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🔵 Bottom-Small - 중앙 영역의 하단 1/3
+                  Positioned(
+                    left: width * 4 / 9,
+                    top: height * 5 / 9,
+                    width: width / 9,
+                    height: height / 9,
+                    child: SplitDropZone(
+                      direction: SplitDirection.bottomSmall,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // ============ 중앙 분할 (2개) - 중앙의 중앙 ============
+
+                  // 🟢 Top-Center - 중앙의 상 50%
+                  Positioned(
+                    left: width * 4 / 9,
+                    top: height * 4 / 9,
+                    width: width / 9,
+                    height: height / 18,
+                    child: SplitDropZone(
+                      direction: SplitDirection.topCenter,
+                      currentTab: tabInfo,
+                    ),
+                  ),
+
+                  // 🔵 Bottom-Center - 중앙의 하 50%
+                  Positioned(
+                    left: width * 4 / 9,
+                    top: height * 4 / 9 + height / 18,
+                    width: width / 9,
+                    height: height / 18,
+                    child: SplitDropZone(
+                      direction: SplitDirection.bottomCenter,
                       currentTab: tabInfo,
                     ),
                   ),
