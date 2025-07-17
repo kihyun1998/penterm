@@ -7,7 +7,7 @@ part of 'split_layout_provider.dart';
 // **************************************************************************
 
 String _$currentTabSplitStateHash() =>
-    r'16e5b83f3b28767bebd92391b31eeb22d5a685dd';
+    r'61a3fb22736e7ad8894ef23dbb114b771c809060';
 
 /// 현재 활성 탭의 분할 상태를 반환하는 편의 Provider
 ///

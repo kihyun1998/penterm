@@ -4346,18 +4346,9 @@ class SplitLayout extends _$SplitLayout {
 SplitLayoutState currentTabSplitState(Ref ref) {
   final splitLayoutState = ref.watch(splitLayoutProvider);
   final activeTabId = ref.watch(activeTabProvider);
-  final splitLayoutNotifier = ref.read(splitLayoutProvider.notifier);
 
-  // 현재 탭의 분할 상태 가져오기
-  final currentState = splitLayoutNotifier.getCurrentTabSplitState();
-
-  // 디버그 로그
-  print('🔄 currentTabSplitState updated: $activeTabId');
-  print('  └─ isSplit: ${currentState.isSplit}');
-  print('  └─ splitType: ${currentState.splitType.name}');
-  print('  └─ panelCount: ${currentState.panelCount}');
-
-  return currentState;
+  return splitLayoutState[activeTabId] ??
+      SplitLayoutState(activeTabId: activeTabId);
 }
 
 ```
