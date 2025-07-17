@@ -5,6 +5,7 @@ import 'package:penterm/core/theme/provider/theme_provider.dart';
 import '../model/split_layout_state.dart';
 import '../model/tab_info.dart';
 import '../provider/split_layout_provider.dart';
+import '../provider/tab_drag_provider.dart'; // 🚨 추가
 import '../provider/tab_provider.dart';
 
 enum SplitDirection {
@@ -92,6 +93,9 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
       onAcceptWithDetails: (draggedTab) {
         // 🆕 실제 분할 실행
         _executeSplit(draggedTab.data);
+
+        // 🚨 드래그 상태 즉시 종료!
+        ref.read(tabDragProvider.notifier).endDrag();
 
         setState(() => _isHovered = false);
         widget.onHoverChanged(null); // hover 해제

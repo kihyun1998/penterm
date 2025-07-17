@@ -104,6 +104,51 @@ class MainScreen extends ConsumerWidget {
               ),
             ),
 
+          /// 🆕 드래그 상태 디버그 정보 + Split 후 상태 확인
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ref.color.neonBlue.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🔍 DRAG STATE DEBUG',
+                    style: ref.font.monoBoldText10.copyWith(
+                      color: ref.color.neonBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'isDragging: ${dragState.isDragging}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: dragState.isDragging ? Colors.red : Colors.green,
+                    ),
+                  ),
+                  Text(
+                    'draggingTabId: ${dragState.draggingTabId ?? 'null'}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'targetIndex: ${dragState.targetIndex ?? 'null'}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
           // 🆕 분할 상태 디버그 정보
           Positioned(
             top: 60,
