@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../feature/terminal/model/terminal_drag_data.dart';
+import '../../../feature/terminal/provider/split_layout_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
 import '../../../feature/terminal/provider/terminal_drag_provider.dart';
@@ -21,6 +23,8 @@ class AppTitleBar extends ConsumerStatefulWidget {
 }
 
 class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
+  bool _isPanelHovering = false; // 🚀 패널 드롭 hover 상태
+
   @override
   void initState() {
     super.initState();
@@ -55,12 +59,16 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
-    final tabList = ref.watch(tabListProvider); // 🚀 List로 변경
-    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
+    final tabList = ref.watch(tabListProvider);
+    final dragState = ref.watch(terminalDragProvider);
 
     // 🚀 정렬 불필요! List 자체가 이미 순서대로 정렬됨
     final fixedTabs = tabList.where((tab) => !tab.isClosable).toList();
     final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
+
+    // 🚀 패널 드래그 중인지 확인
+    final isPanelDragging =
+        dragState.isDragging && dragState.draggingData?.isFromPanel == true;
 
     return Container(
       height: 50,
@@ -71,6 +79,12 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
           const Positioned.fill(
             child: DragToMoveArea(child: SizedBox.expand()),
           ),
+
+          // 🚀 패널 드롭 영역 (패널 드래그 중일 때만 표시)
+          if (isPanelDragging)
+            Positioned.fill(
+              child: _buildPanelDropZone(),
+            ),
 
           // 🎯 탭바 + 컨트롤 버튼
           Container(
@@ -112,15 +126,16 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                         }).toList(),
                       ),
 
-                      // 상위 레이어: 드롭 영역들 (드래그 중일 때만 활성화)
-                      if (dragState.isDragging)
+                      // 상위 레이어: 드롭 영역들 (탭 드래그 중일 때만 활성화)
+                      if (dragState.isDragging &&
+                          dragState.draggingData?.isFromTab == true)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: draggableTabs.asMap().entries.map((entry) {
                             final index = entry.key;
                             final tab = entry.value;
                             return TabDropZone(
-                              targetIndex: index, // 🚀 order → index 변경
+                              targetIndex: index,
                               targetTabName: tab.name,
                             );
                           }).toList(),
@@ -208,8 +223,110 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
               ],
             ),
           ),
+
+          // 🚀 패널 드롭 피드백 오버레이 (hover 시에만 표시)
+          if (isPanelDragging && _isPanelHovering)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: ref.color.primary.withOpacity(0.1),
+                    border: Border.all(
+                      color: ref.color.primary,
+                      width: 2,
+                    ),
+                  ),
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: ref.color.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: ref.color.primary,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: ref.color.primary.withOpacity(0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.tab,
+                            size: 20,
+                            color: ref.color.primary,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Drop here to create new tab',
+                            style: ref.font.semiBoldText14.copyWith(
+                              color: ref.color.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  /// 🚀 패널 드롭 영역 구현
+  Widget _buildPanelDropZone() {
+    return DragTarget<TerminalDragData>(
+      onWillAcceptWithDetails: (data) {
+        // 패널에서 드래그된 데이터만 허용
+        final isFromPanel = data.data.isFromPanel;
+        print('🔍 titlebar will accept? FromPanel: $isFromPanel');
+        return isFromPanel;
+      },
+      onMove: (details) {
+        // 패널 드래그가 titlebar 위에 있을 때
+        if (!_isPanelHovering) {
+          setState(() => _isPanelHovering = true);
+          print('🎯 Panel hovering over titlebar');
+        }
+      },
+      onLeave: (data) {
+        // 패널 드래그가 titlebar를 벗어날 때
+        if (_isPanelHovering) {
+          setState(() => _isPanelHovering = false);
+          print('↩️ Panel left titlebar');
+        }
+      },
+      onAcceptWithDetails: (draggedData) {
+        print('🎯 Panel dropped on titlebar: ${draggedData.data.debugInfo}');
+
+        // 🚀 핵심: unsplitToNewTab 호출!
+        ref.read(splitLayoutProvider.notifier).unsplitToNewTab(
+              draggedData.data.terminalId,
+            );
+
+        // 드래그 상태 종료
+        ref.read(terminalDragProvider.notifier).endDrag();
+
+        // hover 상태 해제
+        setState(() => _isPanelHovering = false);
+
+        print('✅ Panel unsplit to new tab completed');
+      },
+      builder: (context, candidateData, rejectedData) {
+        // 투명한 드롭 영역 (시각적 피드백은 오버레이에서 처리)
+        return const SizedBox.expand();
+      },
     );
   }
 }
