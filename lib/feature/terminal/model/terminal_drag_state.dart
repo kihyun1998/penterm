@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 
 import 'tab_info.dart';
+import 'terminal_drag_data.dart';
 
-/// 탭 드래그 상태를 관리하는 모델 (index 기반)
-class TabDragState {
+/// 터미널 드래그 상태를 관리하는 모델 (통합 버전)
+class TerminalDragState {
   /// 현재 드래그 가능한 탭들 (List 순서 그대로)
   final List<TabInfo> currentTabs;
 
-  /// 드래그 중인 탭 ID
-  final String? draggingTabId;
+  /// 🚀 통합된 드래그 데이터 (탭 또는 패널에서 시작됨)
+  final TerminalDragData? draggingData;
 
   /// 드롭 타겟 index (드롭될 위치의 index)
   final int? targetIndex;
@@ -20,11 +21,15 @@ class TabDragState {
   final Offset? dragPosition;
 
   /// 드래그가 활성화된 상태인지
-  bool get isDragging => draggingTabId != null;
+  bool get isDragging => draggingData != null;
 
-  /// 드래그 중인 탭 정보
-  TabInfo? get draggingTab => isDragging
-      ? currentTabs.firstWhere((tab) => tab.id == draggingTabId!,
+  /// 드래그 중인 터미널 ID (source 무관)
+  String? get draggingTerminalId =>
+      isDragging ? draggingData!.terminalId : null;
+
+  /// 드래그 중인 탭 정보 (탭에서 드래그된 경우만)
+  TabInfo? get draggingTab => isDragging && draggingData!.isFromTab
+      ? currentTabs.firstWhere((tab) => tab.id == draggingData!.terminalId,
           orElse: () => throw StateError('Dragging tab not found'))
       : null;
 
@@ -34,25 +39,25 @@ class TabDragState {
           ? currentTabs[targetIndex!]
           : null;
 
-  const TabDragState({
+  const TerminalDragState({
     this.currentTabs = const [],
-    this.draggingTabId,
+    this.draggingData,
     this.targetIndex,
     this.expectedResult = const [],
     this.dragPosition,
   });
 
   /// 초기 상태 (드래그 없음)
-  static const TabDragState initial = TabDragState();
+  static const TerminalDragState initial = TerminalDragState();
 
-  /// 드래그 시작
-  TabDragState startDrag({
+  /// 🚀 드래그 시작 (통합 버전)
+  TerminalDragState startDrag({
     required List<TabInfo> tabs,
-    required String draggingId,
+    required TerminalDragData dragData,
   }) {
-    return TabDragState(
+    return TerminalDragState(
       currentTabs: tabs,
-      draggingTabId: draggingId,
+      draggingData: dragData,
       targetIndex: null,
       expectedResult: tabs, // 초기에는 현재 순서와 동일
       dragPosition: null,
@@ -60,7 +65,7 @@ class TabDragState {
   }
 
   /// 타겟 index 업데이트 및 예상 결과 계산
-  TabDragState updateTarget({
+  TerminalDragState updateTarget({
     required int newTargetIndex,
     Offset? newDragPosition,
   }) {
@@ -73,13 +78,13 @@ class TabDragState {
 
     final newExpectedResult = _calculateExpectedResult(
       currentTabs: currentTabs,
-      draggingTabId: draggingTabId!,
+      draggingTerminalId: draggingData!.terminalId,
       targetIndex: newTargetIndex,
     );
 
-    return TabDragState(
+    return TerminalDragState(
       currentTabs: currentTabs,
-      draggingTabId: draggingTabId,
+      draggingData: draggingData,
       targetIndex: newTargetIndex,
       expectedResult: newExpectedResult,
       dragPosition: newDragPosition ?? dragPosition,
@@ -87,12 +92,12 @@ class TabDragState {
   }
 
   /// 드래그 위치만 업데이트 (타겟 index는 유지)
-  TabDragState updatePosition(Offset newPosition) {
+  TerminalDragState updatePosition(Offset newPosition) {
     if (!isDragging) return this;
 
-    return TabDragState(
+    return TerminalDragState(
       currentTabs: currentTabs,
-      draggingTabId: draggingTabId,
+      draggingData: draggingData,
       targetIndex: targetIndex,
       expectedResult: expectedResult,
       dragPosition: newPosition,
@@ -100,19 +105,19 @@ class TabDragState {
   }
 
   /// 드래그 종료
-  TabDragState endDrag() {
-    return const TabDragState();
+  TerminalDragState endDrag() {
+    return const TerminalDragState();
   }
 
-  /// 🚀 예상 결과 계산 로직 (index 기반 - 훨씬 간단!)
+  /// 🚀 예상 결과 계산 로직 (터미널 ID 기반)
   static List<TabInfo> _calculateExpectedResult({
     required List<TabInfo> currentTabs,
-    required String draggingTabId,
+    required String draggingTerminalId,
     required int targetIndex,
   }) {
     // 드래그 중인 탭의 현재 index 찾기
     final currentDraggingIndex =
-        currentTabs.indexWhere((tab) => tab.id == draggingTabId);
+        currentTabs.indexWhere((tab) => tab.id == draggingTerminalId);
     if (currentDraggingIndex == -1) return currentTabs;
 
     // 자기 자신에게 드롭하는 경우
@@ -132,23 +137,23 @@ class TabDragState {
     return result;
   }
 
-  /// 드래그 중인 탭의 현재 index
-  int? get draggingIndex => isDragging
-      ? currentTabs.indexWhere((tab) => tab.id == draggingTabId!)
+  /// 드래그 중인 탭의 현재 index (탭에서 드래그된 경우만)
+  int? get draggingIndex => isDragging && draggingData!.isFromTab
+      ? currentTabs.indexWhere((tab) => tab.id == draggingData!.terminalId)
       : null;
 
-  /// 디버그 정보를 위한 문자열 표현
+  /// 🚀 디버그 정보를 위한 문자열 표현 (source 포함)
   String get debugInfo {
     if (!isDragging) return 'No drag in progress';
 
-    // 드래그 중인 탭의 원래 index
+    final sourceInfo = draggingData!.source.name.toUpperCase();
     final originalIndex = draggingIndex;
 
     // 타겟 탭 정보
     final targetTabInfo =
         targetTab != null ? '${targetTab!.name}[$targetIndex]' : 'None';
 
-    // Place Index 계산 (자기 자신인지 확인)
+    // Place Index 계산
     String placeIndexInfo;
     if (targetIndex == null) {
       placeIndexInfo = '${originalIndex ?? 'unknown'} (original position)';
@@ -159,24 +164,25 @@ class TabDragState {
     }
 
     return '''
+Source: $sourceInfo (${draggingData!.debugInfo})
 Current: [${currentTabs.asMap().entries.map((e) => '${e.value.name}[${e.key}]').join(', ')}]
-Dragging: ${draggingTab?.name} (original index: $originalIndex)
+Dragging: ${draggingData!.displayName} (original index: $originalIndex)
 Target Index: ${targetIndex ?? 'null'} (${targetIndex != null ? 'Target Tab: $targetTabInfo' : 'Outside drop zones'})
 Place Index: $placeIndexInfo
 Expected: [${expectedResult.asMap().entries.map((e) => '${e.value.name}[${e.key}]').join(', ')}]
 ''';
   }
 
-  TabDragState copyWith({
+  TerminalDragState copyWith({
     List<TabInfo>? currentTabs,
-    String? draggingTabId,
+    TerminalDragData? draggingData,
     int? targetIndex,
     List<TabInfo>? expectedResult,
     Offset? dragPosition,
   }) {
-    return TabDragState(
+    return TerminalDragState(
       currentTabs: currentTabs ?? this.currentTabs,
-      draggingTabId: draggingTabId ?? this.draggingTabId,
+      draggingData: draggingData ?? this.draggingData,
       targetIndex: targetIndex ?? this.targetIndex,
       expectedResult: expectedResult ?? this.expectedResult,
       dragPosition: dragPosition ?? this.dragPosition,

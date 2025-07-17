@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 import '../model/split_layout_state.dart';
-import '../model/tab_info.dart';
+import '../model/terminal_drag_data.dart'; // 🚀 변경
 import '../provider/split_layout_provider.dart';
-import '../provider/tab_drag_provider.dart'; // 🚨 추가
 import '../provider/tab_provider.dart';
+import '../provider/terminal_drag_provider.dart'; // 🚀 변경
 
 enum SplitDirection {
   // 큰 분할 (4개)
@@ -31,7 +31,7 @@ class SplitDropZone extends ConsumerStatefulWidget {
   final SplitDirection direction;
 
   /// 현재 활성 터미널 탭 정보
-  final TabInfo currentTab;
+  final TerminalDragData currentTab;
 
   /// hover 상태 변경 콜백
   final Function(SplitDirection? direction) onHoverChanged;
@@ -55,26 +55,27 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
     // 🆕 현재 활성 탭 ID 가져오기
     final currentActiveTabId = ref.watch(activeTabProvider);
 
-    return DragTarget<TabInfo>(
+    return DragTarget<TerminalDragData>(
+      // 🚀 변경
       onWillAcceptWithDetails: (data) {
-        // 터미널 탭만 허용하고, 자기 자신(현재 활성 탭)은 제외
-        final isTerminalTab = data.data.type.value == 'terminal';
-        final isNotSelf = data.data.id != currentActiveTabId;
+        // 🚀 탭에서 드래그된 터미널만 허용하고, 자기 자신(현재 활성 탭)은 제외
+        final isFromTab = data.data.isFromTab;
+        final isTerminalTab = data.data.terminalId != currentActiveTabId;
 
         print(
-            '🔍 Will accept? Terminal: $isTerminalTab, NotSelf: $isNotSelf (${data.data.id} != $currentActiveTabId)');
+            '🔍 Will accept? FromTab: $isFromTab, NotSelf: $isTerminalTab (${data.data.terminalId} != $currentActiveTabId)');
 
-        return isTerminalTab && isNotSelf;
+        return isFromTab && isTerminalTab;
       },
       onMove: (details) {
         // 🆕 허용되지 않는 드래그라면 hover 이벤트도 차단
         final currentActiveTabId = ref.read(activeTabProvider);
-        final isTerminalTab = details.data.type.value == 'terminal';
-        final isNotSelf = details.data.id != currentActiveTabId;
+        final isFromTab = details.data.isFromTab;
+        final isTerminalTab = details.data.terminalId != currentActiveTabId;
 
-        if (!isTerminalTab || !isNotSelf) {
+        if (!isFromTab || !isTerminalTab) {
           print(
-              '🚫 Hover blocked: Terminal: $isTerminalTab, NotSelf: $isNotSelf');
+              '🚫 Hover blocked: FromTab: $isFromTab, NotSelf: $isTerminalTab');
           return; // hover 이벤트 차단
         }
 
@@ -90,12 +91,13 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
           widget.onHoverChanged(null); // hover 해제 알림
         }
       },
-      onAcceptWithDetails: (draggedTab) {
+      onAcceptWithDetails: (draggedData) {
+        // 🚀 변경
         // 🆕 실제 분할 실행
-        _executeSplit(draggedTab.data);
+        _executeSplit(draggedData.data);
 
         // 🚨 드래그 상태 즉시 종료!
-        ref.read(tabDragProvider.notifier).endDrag();
+        ref.read(terminalDragProvider.notifier).endDrag(); // 🚀 변경
 
         setState(() => _isHovered = false);
         widget.onHoverChanged(null); // hover 해제
@@ -151,8 +153,10 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
   }
 
   /// 🆕 실제 분할 실행
-  void _executeSplit(TabInfo draggedTab) {
-    print('🎯 Execute split: ${draggedTab.name} → ${widget.direction.name}');
+  void _executeSplit(TerminalDragData draggedData) {
+    // 🚀 변경
+    print(
+        '🎯 Execute split: ${draggedData.displayName} → ${widget.direction.name}');
 
     // SplitDirection을 SplitType과 PanelPosition으로 변환
     final splitInfo = _convertToSplitInfo(widget.direction);
@@ -162,7 +166,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
 
     // SplitLayoutProvider를 통해 실제 분할 실행
     ref.read(splitLayoutProvider.notifier).startSplit(
-          terminalId: draggedTab.id,
+          terminalId: draggedData.terminalId, // 🚀 변경
           splitType: splitInfo.splitType,
           targetPosition: splitInfo.targetPosition,
         );
@@ -291,7 +295,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
     }[widget.direction];
 
     print(
-        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.name}');
+        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.displayName}');
   }
 }
 

@@ -56,14 +56,16 @@ penterm/
     │   │   ├── model/
     │   │       ├── enum_tab_type.dart
     │   │       ├── split_layout_state.dart
-    │   │       ├── tab_drag_state.dart
-    │   │       └── tab_info.dart
+    │   │       ├── tab_info.dart
+    │   │       ├── terminal_drag_data.dart
+    │   │       └── terminal_drag_state.dart
     │   │   ├── provider/
     │   │       ├── active_tabinfo_provider.dart
     │   │       ├── split_layout_provider.dart
     │   │       ├── tab_drag_provider.dart
     │   │       ├── tab_list_provider.dart
-    │   │       └── tab_provider.dart
+    │   │       ├── tab_provider.dart
+    │   │       └── terminal_drag_provider.dart
     │   │   └── ui/
     │   │       └── split_drop_zone.dart
     ├── page/
@@ -2311,9 +2313,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
+import '../../../feature/terminal/provider/terminal_drag_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 import '../app_icon_tab.dart';
@@ -2363,16 +2365,12 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
-    final tabMap = ref.watch(tabListProvider);
-    final dragState = ref.watch(tabDragProvider);
+    final tabList = ref.watch(tabListProvider); // 🚀 List로 변경
+    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
 
-    // Map에서 직접 처리 - order 순으로 정렬
-    final allTabs = tabMap.values.toList();
-    allTabs.sort((a, b) => a.order.compareTo(b.order));
-
-    // 필터링
-    final fixedTabs = allTabs.where((tab) => !tab.isClosable).toList();
-    final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
+    // 🚀 정렬 불필요! List 자체가 이미 순서대로 정렬됨
+    final fixedTabs = tabList.where((tab) => !tab.isClosable).toList();
+    final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
 
     return Container(
       height: 50,
@@ -2389,7 +2387,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                // 🏠 고정 탭들 (HOME, SFTP)
+                // 🏠 고정 탭들 (HOME, SFTP) - 순서 보장됨
                 ...fixedTabs.map((tab) => AppIconTab(
                       text: tab.name,
                       isActive: activeTabId == tab.id,
@@ -2407,14 +2405,16 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     color: ref.color.border,
                   ),
 
-                // 🖥️ 터미널 탭들 + 드롭 영역들
+                // 🖥️ 터미널 탭들 + 드롭 영역들 - 순서 보장됨
                 if (draggableTabs.isNotEmpty)
                   Stack(
                     children: [
                       // 하위 레이어: 일반 탭들
                       Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: draggableTabs.map((tab) {
+                        children: draggableTabs.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final tab = entry.value;
                           return TerminalTabWidget(
                             tab: tab,
                             activeTabId: activeTabId,
@@ -2426,9 +2426,11 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                       if (dragState.isDragging)
                         Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: draggableTabs.map((tab) {
+                          children: draggableTabs.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final tab = entry.value;
                             return TabDropZone(
-                              targetOrder: tab.order,
+                              targetIndex: index, // 🚀 order → index 변경
                               targetTabName: tab.name,
                             );
                           }).toList(),
@@ -2572,25 +2574,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
-import '../../../feature/terminal/model/tab_info.dart';
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
+import '../../../feature/terminal/model/terminal_drag_data.dart'; // 🚀 변경
+import '../../../feature/terminal/provider/terminal_drag_provider.dart'; // 🚀 변경
 
 class TabDropZone extends ConsumerStatefulWidget {
-  /// 이 드롭 영역이 대표하는 탭의 order
-  final int targetOrder;
+  /// 🚀 이 드롭 영역이 대표하는 탭의 index
+  final int targetIndex;
 
   /// 이 드롭 영역이 대표하는 탭의 이름 (디버그용)
   final String targetTabName;
 
-  /// 드롭 영역의 크기 (탭과 동일하게)
+  /// 드롭 영역의 크기 (터미널 탭과 동일하게)
   final double width;
   final double height;
 
   const TabDropZone({
     super.key,
-    required this.targetOrder,
+    required this.targetIndex,
     required this.targetTabName,
-    this.width = 120,
+    this.width = 140.0,
     this.height = 38,
   });
 
@@ -2603,7 +2605,7 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
 
   @override
   Widget build(BuildContext context) {
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
 
     // 드래그 중이 아니면 빈 공간만 차지
     if (!dragState.isDragging) {
@@ -2613,21 +2615,27 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
       );
     }
 
-    // 현재 이 영역이 타겟인지 확인
-    final isTarget = dragState.targetOrder == widget.targetOrder;
+    // 🚀 현재 이 영역이 타겟인지 확인 (index 기반)
+    final isTarget = dragState.targetIndex == widget.targetIndex;
 
-    return DragTarget<TabInfo>(
+    return DragTarget<TerminalDragData>(
+      // 🚀 변경
       onWillAcceptWithDetails: (data) {
-        // 드래그 중인 탭이 유효한지 확인
-        return dragState.currentTabs.containsKey(data.data.id);
+        // 🚀 탭에서 드래그된 데이터만 허용
+        final isFromTab = data.data.isFromTab;
+        final isValidTerminal =
+            dragState.currentTabs.any((tab) => tab.id == data.data.terminalId);
+
+        return isFromTab && isValidTerminal;
       },
       onMove: (details) {
         // 마우스가 이 영역 위에 있을 때 타겟으로 설정
         if (!_isHovered) {
           setState(() => _isHovered = true);
 
-          ref.read(tabDragProvider.notifier).updateTarget(
-                widget.targetOrder,
+          ref.read(terminalDragProvider.notifier).updateTarget(
+                // 🚀 변경
+                widget.targetIndex,
                 dragPosition: details.offset,
               );
         }
@@ -2636,21 +2644,25 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
         // 마우스가 이 영역을 벗어날 때
         setState(() => _isHovered = false);
       },
-      onAcceptWithDetails: (draggedTab) {
+      onAcceptWithDetails: (draggedData) {
+        // 🚀 변경
         // 실제 드롭이 발생했을 때 - 이제 실제 이동 수행
-        if (draggedTab.data.order == widget.targetOrder) {
+        final draggedIndex = dragState.currentTabs
+            .indexWhere((tab) => tab.id == draggedData.data.terminalId);
+
+        if (draggedIndex == widget.targetIndex) {
           print(
               '🔄 Dropped on self: ${widget.targetTabName} (return to original position)');
           print('📋 No change needed - same position');
         } else {
           print(
-              '🎯 Dropped on zone: ${widget.targetTabName} (order ${widget.targetOrder})');
+              '🎯 Dropped on zone: ${widget.targetTabName} (index ${widget.targetIndex})');
           print(
-              '📋 Moving ${draggedTab.data.name} from order ${draggedTab.data.order} to order ${widget.targetOrder}');
+              '📋 Moving ${draggedData.data.displayName} from index $draggedIndex to index ${widget.targetIndex}');
         }
 
         // 실제 이동 수행
-        ref.read(tabDragProvider.notifier).endDrag();
+        ref.read(terminalDragProvider.notifier).endDrag(); // 🚀 변경
         setState(() => _isHovered = false);
       },
       builder: (context, candidateData, rejectedData) {
@@ -2719,9 +2731,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 import '../../../feature/terminal/model/tab_info.dart';
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
+import '../../../feature/terminal/model/terminal_drag_data.dart'; // 🚀 추가
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
+import '../../../feature/terminal/provider/terminal_drag_provider.dart'; // 🚀 변경
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 
@@ -2742,44 +2755,55 @@ class TerminalTabWidget extends ConsumerStatefulWidget {
 class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
   bool _isHovered = false;
 
+  // 🆕 고정 탭 너비
+  static const double _tabWidth = 140.0;
+
   @override
   Widget build(BuildContext context) {
     final isActive = widget.activeTabId == widget.tab.id;
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
 
     // 현재 탭이 드래그 중인지 확인
-    final isDragging = dragState.draggingTabId == widget.tab.id;
+    final isDragging =
+        dragState.isDragging && dragState.draggingTerminalId == widget.tab.id;
 
-    // Draggable로 감싸서 드래그 가능하게 만들기
-    return Draggable<TabInfo>(
-      data: widget.tab,
+    // 🚀 Draggable을 TerminalDragData로 변경
+    return Draggable<TerminalDragData>(
+      data: TerminalDragData(
+        terminalId: widget.tab.id,
+        displayName: widget.tab.name,
+        source: DragSource.tab, // 🚀 탭에서 시작
+      ),
       feedback: _buildDragFeedback(isActive),
       childWhenDragging: _buildTabContent(isActive, true), // 투명한 탭 유지
       onDragStarted: () {
         print('🚀 Drag started: ${widget.tab.name}');
-        ref.read(tabDragProvider.notifier).startDrag(widget.tab.id);
+        ref
+            .read(terminalDragProvider.notifier)
+            .startTabDrag(widget.tab.id); // 🚀 변경
       },
       onDragUpdate: (details) {
         ref
-            .read(tabDragProvider.notifier)
+            .read(terminalDragProvider.notifier)
             .updatePosition(details.globalPosition);
       },
       onDragEnd: (details) {
         print('✅ Drag ended: ${widget.tab.name}');
-        final dragState = ref.read(tabDragProvider);
+        final dragState = ref.read(terminalDragProvider);
 
-        if (dragState.targetOrder != null) {
+        if (dragState.targetIndex != null) {
+          // 🚀 변경
           print('📋 Target found - will be handled by TabDropZone');
           // TabDropZone에서 endDrag()를 호출할 것임
         } else {
           print('📋 No target - returning to original position');
           // 드롭 영역 밖에서 끝난 경우 원래 자리로 복귀
-          ref.read(tabDragProvider.notifier).cancelDrag();
+          ref.read(terminalDragProvider.notifier).cancelDrag();
         }
       },
       onDraggableCanceled: (velocity, offset) {
         print('❌ Drag canceled: ${widget.tab.name}');
-        ref.read(tabDragProvider.notifier).cancelDrag();
+        ref.read(terminalDragProvider.notifier).cancelDrag();
       },
       child: _buildTabContent(isActive, isDragging),
     );
@@ -2790,6 +2814,8 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
     return Opacity(
       opacity: isDragging ? 0.5 : 1.0, // 드래그 중일 때 투명도 적용
       child: Container(
+        // 🆕 고정 너비 적용
+        width: _tabWidth,
         margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
         child: MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
@@ -2822,7 +2848,6 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // 탭 아이콘 (터미널)
                         Icon(
@@ -2833,13 +2858,17 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                               : ref.color.onBackgroundSoft,
                         ),
                         const SizedBox(width: 6),
-                        // 탭 이름
-                        Text(
-                          widget.tab.name,
-                          style: ref.font.semiBoldText12.copyWith(
-                            color: isActive
-                                ? ref.color.primary
-                                : ref.color.onBackgroundSoft,
+                        // 🆕 탭 이름 - Expanded로 감싸고 ellipsis 처리
+                        Expanded(
+                          child: Text(
+                            widget.tab.name,
+                            style: ref.font.semiBoldText12.copyWith(
+                              color: isActive
+                                  ? ref.color.primary
+                                  : ref.color.onBackgroundSoft,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                         const SizedBox(width: 16), // X 버튼 공간 확보
@@ -2886,6 +2915,8 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
     return Material(
       color: Colors.transparent,
       child: Container(
+        // 🆕 피드백도 동일한 고정 너비
+        width: _tabWidth,
         margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
         decoration: BoxDecoration(
           color:
@@ -2919,7 +2950,6 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // 탭 아이콘 (터미널)
               Icon(
@@ -2929,12 +2959,17 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                     isActive ? ref.color.primary : ref.color.onBackgroundSoft,
               ),
               const SizedBox(width: 6),
-              // 탭 이름
-              Text(
-                widget.tab.name,
-                style: ref.font.semiBoldText12.copyWith(
-                  color:
-                      isActive ? ref.color.primary : ref.color.onBackgroundSoft,
+              // 🆕 탭 이름 - 피드백에서도 ellipsis 처리
+              Expanded(
+                child: Text(
+                  widget.tab.name,
+                  style: ref.font.semiBoldText12.copyWith(
+                    color: isActive
+                        ? ref.color.primary
+                        : ref.color.onBackgroundSoft,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],
@@ -3726,207 +3761,6 @@ ${panels.entries.map((e) => '  ${e.key}: ${e.value.position.name} (terminal: ${e
 }
 
 ```
-## lib/feature/terminal/model/tab_drag_state.dart
-```dart
-import 'package:flutter/material.dart';
-
-import 'tab_info.dart';
-
-/// 새로운 탭 드래그 상태를 관리하는 모델
-class TabDragState {
-  /// 현재 드래그 가능한 탭들 (draggable tabs만)
-  final Map<String, TabInfo> currentTabs;
-
-  /// 드래그 중인 탭 ID
-  final String? draggingTabId;
-
-  /// 드롭 타겟 order (드롭될 위치의 order)
-  final int? targetOrder;
-
-  /// 예상 결과 순서 (드롭했을 때의 새로운 탭들)
-  final Map<String, TabInfo> expectedResult;
-
-  /// 드래그 중인 마우스 위치 (디버그용)
-  final Offset? dragPosition;
-
-  /// 드래그가 활성화된 상태인지
-  bool get isDragging => draggingTabId != null;
-
-  /// 드래그 중인 탭 정보
-  TabInfo? get draggingTab => isDragging ? currentTabs[draggingTabId!] : null;
-
-  /// 타겟 위치의 탭 정보 (드롭될 위치의 기존 탭)
-  TabInfo? get targetTab => targetOrder != null
-      ? currentTabs.values.where((tab) => tab.order == targetOrder).firstOrNull
-      : null;
-
-  const TabDragState({
-    this.currentTabs = const {},
-    this.draggingTabId,
-    this.targetOrder,
-    this.expectedResult = const {},
-    this.dragPosition,
-  });
-
-  /// 초기 상태 (드래그 없음)
-  static const TabDragState initial = TabDragState();
-
-  /// 드래그 시작
-  TabDragState startDrag({
-    required Map<String, TabInfo> tabs,
-    required String draggingId,
-  }) {
-    return TabDragState(
-      currentTabs: tabs,
-      draggingTabId: draggingId,
-      targetOrder: null,
-      expectedResult: tabs, // 초기에는 현재 순서와 동일
-      dragPosition: null,
-    );
-  }
-
-  /// 타겟 order 업데이트 및 예상 결과 계산
-  TabDragState updateTarget({
-    required int newTargetOrder,
-    Offset? newDragPosition,
-  }) {
-    if (!isDragging) return this;
-
-    final newExpectedResult = _calculateExpectedResult(
-      currentTabs: currentTabs,
-      draggingTabId: draggingTabId!,
-      targetOrder: newTargetOrder,
-    );
-
-    return TabDragState(
-      currentTabs: currentTabs,
-      draggingTabId: draggingTabId,
-      targetOrder: newTargetOrder,
-      expectedResult: newExpectedResult,
-      dragPosition: newDragPosition ?? dragPosition,
-    );
-  }
-
-  /// 드래그 위치만 업데이트 (타겟 order는 유지)
-  TabDragState updatePosition(Offset newPosition) {
-    if (!isDragging) return this;
-
-    return TabDragState(
-      currentTabs: currentTabs,
-      draggingTabId: draggingTabId,
-      targetOrder: targetOrder,
-      expectedResult: expectedResult,
-      dragPosition: newPosition,
-    );
-  }
-
-  /// 드래그 종료
-  TabDragState endDrag() {
-    return const TabDragState();
-  }
-
-  /// 예상 결과 계산 로직 (order 기반)
-  static Map<String, TabInfo> _calculateExpectedResult({
-    required Map<String, TabInfo> currentTabs,
-    required String draggingTabId,
-    required int targetOrder,
-  }) {
-    final draggingTab = currentTabs[draggingTabId];
-    if (draggingTab == null) return currentTabs;
-
-    // 현재 order로 정렬된 탭 리스트
-    final sortedTabs = currentTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    // 드래그 중인 탭의 현재 order
-    final currentDraggingOrder = draggingTab.order;
-
-    // 자기 자신에게 드롭하는 경우
-    if (currentDraggingOrder == targetOrder) {
-      return currentTabs; // 변경 없음
-    }
-
-    final result = <String, TabInfo>{};
-
-    // 모든 탭의 새로운 order 계산
-    for (final tab in sortedTabs) {
-      if (tab.id == draggingTabId) {
-        // 드래그 중인 탭은 타겟 order로 설정
-        result[tab.id] = tab.copyWith(order: targetOrder);
-      } else if (currentDraggingOrder < targetOrder) {
-        // 뒤로 이동하는 경우: 중간 탭들을 앞으로 이동
-        if (tab.order > currentDraggingOrder && tab.order <= targetOrder) {
-          result[tab.id] = tab.copyWith(order: tab.order - 1);
-        } else {
-          result[tab.id] = tab; // 변경 없음
-        }
-      } else {
-        // 앞으로 이동하는 경우: 중간 탭들을 뒤로 이동
-        if (tab.order >= targetOrder && tab.order < currentDraggingOrder) {
-          result[tab.id] = tab.copyWith(order: tab.order + 1);
-        } else {
-          result[tab.id] = tab; // 변경 없음
-        }
-      }
-    }
-
-    return result;
-  }
-
-  /// 디버그 정보를 위한 문자열 표현
-  String get debugInfo {
-    if (!isDragging) return 'No drag in progress';
-
-    // order 순으로 정렬해서 표시
-    final currentOrder = currentTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    final expectedOrder = expectedResult.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    // 드래그 중인 탭의 원래 order
-    final originalOrder = draggingTab?.order;
-
-    // 타겟 탭 정보
-    final targetTabInfo =
-        targetTab != null ? '${targetTab!.name}(${targetTab!.order})' : 'None';
-
-    // Place Order 계산 (자기 자신인지 확인)
-    String placeOrderInfo;
-    if (targetOrder == null) {
-      placeOrderInfo = '${originalOrder ?? 'unknown'} (original position)';
-    } else if (targetOrder == originalOrder) {
-      placeOrderInfo = '$targetOrder (same as original - no change)';
-    } else {
-      placeOrderInfo = '$targetOrder (new position)';
-    }
-
-    return '''
-Current: [${currentOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}]
-Dragging: ${draggingTab?.name} (original order: $originalOrder)
-Target Order: ${targetOrder ?? 'null'} (${targetOrder != null ? 'Target Tab: $targetTabInfo' : 'Outside drop zones'})
-Place Order: $placeOrderInfo
-Expected: [${expectedOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}]
-''';
-  }
-
-  TabDragState copyWith({
-    Map<String, TabInfo>? currentTabs,
-    String? draggingTabId,
-    int? targetOrder,
-    Map<String, TabInfo>? expectedResult,
-    Offset? dragPosition,
-  }) {
-    return TabDragState(
-      currentTabs: currentTabs ?? this.currentTabs,
-      draggingTabId: draggingTabId ?? this.draggingTabId,
-      targetOrder: targetOrder ?? this.targetOrder,
-      expectedResult: expectedResult ?? this.expectedResult,
-      dragPosition: dragPosition ?? this.dragPosition,
-    );
-  }
-}
-
-```
 ## lib/feature/terminal/model/tab_info.dart
 ```dart
 // ignore_for_file: public_member_api_docs, sort_constructors_first
@@ -3937,14 +3771,13 @@ class TabInfo {
   final String id;
   final TabType type;
   final String name;
-  final int order;
   final bool isClosable;
+  // 🚀 order 필드 완전 제거 - List index가 순서를 담당
 
   const TabInfo({
     required this.id,
     required this.type,
     required this.name,
-    required this.order,
     this.isClosable = true,
   });
 
@@ -3952,15 +3785,272 @@ class TabInfo {
     String? id,
     TabType? type,
     String? name,
-    int? order,
     bool? isClosable,
   }) {
     return TabInfo(
       id: id ?? this.id,
       type: type ?? this.type,
       name: name ?? this.name,
-      order: order ?? this.order,
       isClosable: isClosable ?? this.isClosable,
+    );
+  }
+}
+
+```
+## lib/feature/terminal/model/terminal_drag_data.dart
+```dart
+/// 터미널 드래그 시작점을 구분하는 enum
+enum DragSource {
+  tab, // 탭바에서 드래그 시작
+  panel, // 패널에서 드래그 시작
+}
+
+/// 통합된 터미널 드래그 데이터
+/// 탭 드래그와 패널 드래그를 하나로 통합
+class TerminalDragData {
+  /// 드래그되는 터미널의 ID
+  final String terminalId;
+
+  /// 표시될 이름 (UI용)
+  final String displayName;
+
+  /// 드래그가 시작된 위치 (탭 또는 패널)
+  final DragSource source;
+
+  const TerminalDragData({
+    required this.terminalId,
+    required this.displayName,
+    required this.source,
+  });
+
+  /// 탭에서 드래그된 데이터인지 확인
+  bool get isFromTab => source == DragSource.tab;
+
+  /// 패널에서 드래그된 데이터인지 확인
+  bool get isFromPanel => source == DragSource.panel;
+
+  /// 디버그용 문자열 표현
+  String get debugInfo => '$displayName (from ${source.name})';
+
+  TerminalDragData copyWith({
+    String? terminalId,
+    String? displayName,
+    DragSource? source,
+  }) {
+    return TerminalDragData(
+      terminalId: terminalId ?? this.terminalId,
+      displayName: displayName ?? this.displayName,
+      source: source ?? this.source,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is TerminalDragData &&
+        other.terminalId == terminalId &&
+        other.displayName == displayName &&
+        other.source == source;
+  }
+
+  @override
+  int get hashCode => Object.hash(terminalId, displayName, source);
+
+  @override
+  String toString() => 'TerminalDragData($debugInfo)';
+}
+
+```
+## lib/feature/terminal/model/terminal_drag_state.dart
+```dart
+import 'package:flutter/material.dart';
+
+import 'tab_info.dart';
+import 'terminal_drag_data.dart';
+
+/// 터미널 드래그 상태를 관리하는 모델 (통합 버전)
+class TerminalDragState {
+  /// 현재 드래그 가능한 탭들 (List 순서 그대로)
+  final List<TabInfo> currentTabs;
+
+  /// 🚀 통합된 드래그 데이터 (탭 또는 패널에서 시작됨)
+  final TerminalDragData? draggingData;
+
+  /// 드롭 타겟 index (드롭될 위치의 index)
+  final int? targetIndex;
+
+  /// 예상 결과 순서 (드롭했을 때의 새로운 탭 리스트)
+  final List<TabInfo> expectedResult;
+
+  /// 드래그 중인 마우스 위치 (디버그용)
+  final Offset? dragPosition;
+
+  /// 드래그가 활성화된 상태인지
+  bool get isDragging => draggingData != null;
+
+  /// 드래그 중인 터미널 ID (source 무관)
+  String? get draggingTerminalId =>
+      isDragging ? draggingData!.terminalId : null;
+
+  /// 드래그 중인 탭 정보 (탭에서 드래그된 경우만)
+  TabInfo? get draggingTab => isDragging && draggingData!.isFromTab
+      ? currentTabs.firstWhere((tab) => tab.id == draggingData!.terminalId,
+          orElse: () => throw StateError('Dragging tab not found'))
+      : null;
+
+  /// 타겟 위치의 탭 정보 (드롭될 위치의 기존 탭)
+  TabInfo? get targetTab =>
+      targetIndex != null && targetIndex! < currentTabs.length
+          ? currentTabs[targetIndex!]
+          : null;
+
+  const TerminalDragState({
+    this.currentTabs = const [],
+    this.draggingData,
+    this.targetIndex,
+    this.expectedResult = const [],
+    this.dragPosition,
+  });
+
+  /// 초기 상태 (드래그 없음)
+  static const TerminalDragState initial = TerminalDragState();
+
+  /// 🚀 드래그 시작 (통합 버전)
+  TerminalDragState startDrag({
+    required List<TabInfo> tabs,
+    required TerminalDragData dragData,
+  }) {
+    return TerminalDragState(
+      currentTabs: tabs,
+      draggingData: dragData,
+      targetIndex: null,
+      expectedResult: tabs, // 초기에는 현재 순서와 동일
+      dragPosition: null,
+    );
+  }
+
+  /// 타겟 index 업데이트 및 예상 결과 계산
+  TerminalDragState updateTarget({
+    required int newTargetIndex,
+    Offset? newDragPosition,
+  }) {
+    if (!isDragging) return this;
+
+    // 유효한 index인지 확인
+    if (newTargetIndex < 0 || newTargetIndex >= currentTabs.length) {
+      return this;
+    }
+
+    final newExpectedResult = _calculateExpectedResult(
+      currentTabs: currentTabs,
+      draggingTerminalId: draggingData!.terminalId,
+      targetIndex: newTargetIndex,
+    );
+
+    return TerminalDragState(
+      currentTabs: currentTabs,
+      draggingData: draggingData,
+      targetIndex: newTargetIndex,
+      expectedResult: newExpectedResult,
+      dragPosition: newDragPosition ?? dragPosition,
+    );
+  }
+
+  /// 드래그 위치만 업데이트 (타겟 index는 유지)
+  TerminalDragState updatePosition(Offset newPosition) {
+    if (!isDragging) return this;
+
+    return TerminalDragState(
+      currentTabs: currentTabs,
+      draggingData: draggingData,
+      targetIndex: targetIndex,
+      expectedResult: expectedResult,
+      dragPosition: newPosition,
+    );
+  }
+
+  /// 드래그 종료
+  TerminalDragState endDrag() {
+    return const TerminalDragState();
+  }
+
+  /// 🚀 예상 결과 계산 로직 (터미널 ID 기반)
+  static List<TabInfo> _calculateExpectedResult({
+    required List<TabInfo> currentTabs,
+    required String draggingTerminalId,
+    required int targetIndex,
+  }) {
+    // 드래그 중인 탭의 현재 index 찾기
+    final currentDraggingIndex =
+        currentTabs.indexWhere((tab) => tab.id == draggingTerminalId);
+    if (currentDraggingIndex == -1) return currentTabs;
+
+    // 자기 자신에게 드롭하는 경우
+    if (currentDraggingIndex == targetIndex) {
+      return currentTabs; // 변경 없음
+    }
+
+    // 🚀 List 이동 시뮬레이션 (매우 간단!)
+    final result = List<TabInfo>.from(currentTabs);
+    final draggingTab = result.removeAt(currentDraggingIndex);
+
+    // targetIndex 조정 (앞에서 제거했을 경우)
+    final adjustedTargetIndex =
+        currentDraggingIndex < targetIndex ? targetIndex - 1 : targetIndex;
+
+    result.insert(adjustedTargetIndex, draggingTab);
+    return result;
+  }
+
+  /// 드래그 중인 탭의 현재 index (탭에서 드래그된 경우만)
+  int? get draggingIndex => isDragging && draggingData!.isFromTab
+      ? currentTabs.indexWhere((tab) => tab.id == draggingData!.terminalId)
+      : null;
+
+  /// 🚀 디버그 정보를 위한 문자열 표현 (source 포함)
+  String get debugInfo {
+    if (!isDragging) return 'No drag in progress';
+
+    final sourceInfo = draggingData!.source.name.toUpperCase();
+    final originalIndex = draggingIndex;
+
+    // 타겟 탭 정보
+    final targetTabInfo =
+        targetTab != null ? '${targetTab!.name}[$targetIndex]' : 'None';
+
+    // Place Index 계산
+    String placeIndexInfo;
+    if (targetIndex == null) {
+      placeIndexInfo = '${originalIndex ?? 'unknown'} (original position)';
+    } else if (targetIndex == originalIndex) {
+      placeIndexInfo = '$targetIndex (same as original - no change)';
+    } else {
+      placeIndexInfo = '$targetIndex (new position)';
+    }
+
+    return '''
+Source: $sourceInfo (${draggingData!.debugInfo})
+Current: [${currentTabs.asMap().entries.map((e) => '${e.value.name}[${e.key}]').join(', ')}]
+Dragging: ${draggingData!.displayName} (original index: $originalIndex)
+Target Index: ${targetIndex ?? 'null'} (${targetIndex != null ? 'Target Tab: $targetTabInfo' : 'Outside drop zones'})
+Place Index: $placeIndexInfo
+Expected: [${expectedResult.asMap().entries.map((e) => '${e.value.name}[${e.key}]').join(', ')}]
+''';
+  }
+
+  TerminalDragState copyWith({
+    List<TabInfo>? currentTabs,
+    TerminalDragData? draggingData,
+    int? targetIndex,
+    List<TabInfo>? expectedResult,
+    Offset? dragPosition,
+  }) {
+    return TerminalDragState(
+      currentTabs: currentTabs ?? this.currentTabs,
+      draggingData: draggingData ?? this.draggingData,
+      targetIndex: targetIndex ?? this.targetIndex,
+      expectedResult: expectedResult ?? this.expectedResult,
+      dragPosition: dragPosition ?? this.dragPosition,
     );
   }
 }
@@ -3980,10 +4070,15 @@ part 'active_tabinfo_provider.g.dart';
 @Riverpod(dependencies: [ActiveTab, TabList])
 TabInfo? activeTabInfo(Ref ref) {
   final activeTabId = ref.watch(activeTabProvider);
-  final tabMap = ref.watch(tabListProvider);
+  final tabList = ref.watch(tabListProvider);
 
-  // Map에서 직접 탭 정보 반환
-  return tabMap[activeTabId];
+  // 🚀 List에서 직접 탭 정보 찾기
+  try {
+    return tabList.firstWhere((tab) => tab.id == activeTabId);
+  } catch (e) {
+    // 탭을 찾을 수 없는 경우 null 반환
+    return null;
+  }
 }
 
 ```
@@ -4100,9 +4195,7 @@ class SplitLayout extends _$SplitLayout {
 
     // 현재 활성 탭 이름 변경 (Split 표시)
     print('✏️ Updating active tab name to show split state');
-    ref
-        .read(tabListProvider.notifier)
-        .renameTab(currentActiveTabId, 'Terminal (Split)');
+    ref.read(tabListProvider.notifier).renameTab(currentActiveTabId, 'Split');
 
     // 드래그된 터미널 탭을 탭 목록에서 안전하게 제거
     print('🗑️ Safely removing dragged terminal tab: $terminalId');
@@ -4111,7 +4204,7 @@ class SplitLayout extends _$SplitLayout {
     // 🆕 제거 후 탭 상태 확인
     final remainingTabs = ref.read(tabListProvider);
     print('📋 Remaining tabs after removal:');
-    for (final tab in remainingTabs.values) {
+    for (final tab in remainingTabs) {
       print('  └─ ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
     }
 
@@ -4351,142 +4444,161 @@ SplitLayoutState currentTabSplitState(Ref ref) {
 ```
 ## lib/feature/terminal/provider/tab_drag_provider.dart
 ```dart
-import 'package:flutter/material.dart';
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+// import 'package:flutter/material.dart';
+// import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../model/tab_drag_state.dart';
-import '../model/tab_info.dart';
-import 'tab_list_provider.dart';
+// import '../model/terminal_drag_state.dart';
+// import 'tab_list_provider.dart';
 
-part 'tab_drag_provider.g.dart';
+// part 'tab_drag_provider.g.dart';
 
-@Riverpod(dependencies: [TabList])
-class TabDrag extends _$TabDrag {
-  @override
-  TabDragState build() {
-    return TabDragState.initial;
-  }
+// @Riverpod(dependencies: [TabList])
+// class TabDrag extends _$TabDrag {
+//   @override
+//   TabDragState build() {
+//     return TabDragState.initial;
+//   }
 
-  /// 드래그 시작
-  void startDrag(String tabId) {
-    final tabMap = ref.read(tabListProvider);
+//   /// 드래그 시작
+//   void startDrag(String tabId) {
+//     final tabList = ref.read(tabListProvider);
 
-    // 드래그 가능한 탭들만 필터링
-    final draggableTabs = <String, TabInfo>{};
-    for (final entry in tabMap.entries) {
-      if (entry.value.isClosable) {
-        draggableTabs[entry.key] = entry.value;
-      }
-    }
+//     // 🚀 드래그 가능한 탭들만 필터링 (List 기반)
+//     final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
 
-    // 드래그 중인 탭이 존재하는지 확인
-    if (!draggableTabs.containsKey(tabId)) {
-      print('❌ Tab not found for drag: $tabId');
-      return;
-    }
+//     // 드래그 중인 탭이 존재하는지 확인
+//     final draggingTabExists = draggableTabs.any((tab) => tab.id == tabId);
+//     if (!draggingTabExists) {
+//       print('❌ Tab not found for drag: $tabId');
+//       return;
+//     }
 
-    final draggingTab = draggableTabs[tabId]!;
-    print('🚀 Start drag: ${draggingTab.name} (order ${draggingTab.order})');
+//     final draggingTab = draggableTabs.firstWhere((tab) => tab.id == tabId);
+//     print(
+//         '🚀 Start drag: ${draggingTab.name} (index ${draggableTabs.indexOf(draggingTab)})');
 
-    state = state.startDrag(
-      tabs: draggableTabs,
-      draggingId: tabId,
-    );
-  }
+//     state = state.startDrag(
+//       tabs: draggableTabs,
+//       draggingId: tabId,
+//     );
+//   }
 
-  /// 타겟 order 업데이트
-  void updateTarget(int newTargetOrder, {Offset? dragPosition}) {
-    if (!state.isDragging) {
-      print('❌ Cannot update target: not dragging');
-      return;
-    }
+//   /// 🚀 타겟 index 업데이트 - order 대신 index 사용!
+//   void updateTarget(int newTargetIndex, {Offset? dragPosition}) {
+//     if (!state.isDragging) {
+//       print('❌ Cannot update target: not dragging');
+//       return;
+//     }
 
-    // 존재하는 order인지 확인
-    final targetTab = state.currentTabs.values
-        .where((tab) => tab.order == newTargetOrder)
-        .firstOrNull;
+//     // 🚀 유효한 index인지 확인
+//     if (newTargetIndex < 0 || newTargetIndex >= state.currentTabs.length) {
+//       print(
+//           '❌ Target index out of range: $newTargetIndex (max: ${state.currentTabs.length - 1})');
+//       return;
+//     }
 
-    if (targetTab == null) {
-      print('❌ Target order not found: $newTargetOrder');
-      return;
-    }
+//     final targetTab = state.currentTabs[newTargetIndex];
 
-    // 자기 자신에게 드롭하는 것도 허용 (원래 자리로 돌아가기)
-    if (state.draggingTabId == targetTab.id) {
-      print('🔄 Drop on self: ${targetTab.name} (return to original position)');
-    } else {
-      print('🎯 Update target: order $newTargetOrder (${targetTab.name})');
-    }
+//     // 자기 자신에게 드롭하는 것도 허용 (원래 자리로 돌아가기)
+//     final draggingIndex = state.draggingIndex;
+//     if (draggingIndex == newTargetIndex) {
+//       print('🔄 Drop on self: ${targetTab.name} (return to original position)');
+//     } else {
+//       print('🎯 Update target: index $newTargetIndex (${targetTab.name})');
+//     }
 
-    state = state.updateTarget(
-      newTargetOrder: newTargetOrder,
-      newDragPosition: dragPosition,
-    );
-  }
+//     state = state.updateTarget(
+//       newTargetIndex: newTargetIndex,
+//       newDragPosition: dragPosition,
+//     );
+//   }
 
-  /// 드래그 위치 업데이트 (타겟 인덱스는 유지)
-  void updatePosition(Offset position) {
-    if (!state.isDragging) return;
+//   /// 드래그 위치 업데이트 (타겟 index는 유지)
+//   void updatePosition(Offset position) {
+//     if (!state.isDragging) return;
 
-    state = state.updatePosition(position);
-  }
+//     state = state.updatePosition(position);
+//   }
 
-  /// 드래그 종료 (실제 순서 변경)
-  void endDrag() {
-    if (!state.isDragging) {
-      print('❌ Cannot end drag: not dragging');
-      return;
-    }
+//   /// 🚀 드래그 종료 (실제 순서 변경) - index 기반!
+//   void endDrag() {
+//     if (!state.isDragging) {
+//       print('❌ Cannot end drag: not dragging');
+//       return;
+//     }
 
-    final draggingTab = state.draggingTab!;
-    final targetOrder = state.targetOrder;
+//     final draggingTab = state.draggingTab!;
+//     final targetIndex = state.targetIndex;
+//     final draggingIndex = state.draggingIndex!;
 
-    print('✅ End drag: ${draggingTab.name}');
+//     print('✅ End drag: ${draggingTab.name}');
 
-    // expectedResult의 순서 표시 (디버그용)
-    final expectedOrder = state.expectedResult.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    print(
-        '📋 Expected result: ${expectedOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}');
+//     // expectedResult의 순서 표시 (디버그용)
+//     final expectedOrder = state.expectedResult
+//         .asMap()
+//         .entries
+//         .map((e) => '${e.value.name}[${e.key}]')
+//         .join(', ');
+//     print('📋 Expected result: $expectedOrder');
 
-    // 실제 순서 변경 적용
-    if (targetOrder != null && targetOrder != draggingTab.order) {
-      print('🔄 Applying order change...');
-      _applyOrderChange(draggingTab.id, draggingTab.order, targetOrder);
-    } else {
-      print('📌 No order change needed');
-    }
+//     // 실제 순서 변경 적용
+//     if (targetIndex != null && targetIndex != draggingIndex) {
+//       print('🔄 Applying index change...');
+//       _applyIndexChange(draggingTab.id, draggingIndex, targetIndex);
+//     } else {
+//       print('📌 No index change needed');
+//     }
 
-    // 드래그 상태 초기화
-    state = state.endDrag();
-  }
+//     // 드래그 상태 초기화
+//     state = state.endDrag();
+//   }
 
-  /// 드래그 취소
-  void cancelDrag() {
-    if (!state.isDragging) return;
+//   /// 드래그 취소
+//   void cancelDrag() {
+//     if (!state.isDragging) return;
 
-    print('❌ Cancel drag: ${state.draggingTab?.name}');
-    state = state.endDrag();
-  }
+//     print('❌ Cancel drag: ${state.draggingTab?.name}');
+//     state = state.endDrag();
+//   }
 
-  /// 실제 탭 순서 변경 적용 (order 기반)
-  void _applyOrderChange(String draggingTabId, int fromOrder, int toOrder) {
-    final tabListNotifier = ref.read(tabListProvider.notifier);
+//   /// 🚀 실제 탭 순서 변경 적용 (index 기반) - 혁신적으로 간단!
+//   void _applyIndexChange(String draggingTabId, int fromIndex, int toIndex) {
+//     final tabListNotifier = ref.read(tabListProvider.notifier);
 
-    print(
-        '🔧 Order change: $draggingTabId from order $fromOrder to order $toOrder');
+//     print(
+//         '🔧 Index change: $draggingTabId from index $fromIndex to index $toIndex');
 
-    // 새로운 order 기반 메서드 호출
-    tabListNotifier.reorderTabByOrder(draggingTabId, fromOrder, toOrder);
+//     // 🚀 전체 탭 리스트에서의 실제 인덱스 계산
+//     final allTabs = ref.read(tabListProvider);
+//     final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
 
-    print('✅ Order change applied successfully');
-  }
+//     // 드래그 가능한 탭들 중에서의 인덱스를 전체 탭 리스트의 인덱스로 변환
+//     final realFromIndex = allTabs.indexWhere((tab) => tab.id == draggingTabId);
 
-  /// 디버그 정보 출력
-  void printDebugInfo() {
-    print('🐛 Debug Info:\n${state.debugInfo}');
-  }
-}
+//     // toIndex에 해당하는 드래그 가능한 탭의 실제 인덱스 찾기
+//     final targetDraggableTab = draggableTabs[toIndex];
+//     final realToIndex =
+//         allTabs.indexWhere((tab) => tab.id == targetDraggableTab.id);
+
+//     if (realFromIndex == -1 || realToIndex == -1) {
+//       print(
+//           '❌ Could not find real indices: realFromIndex=$realFromIndex, realToIndex=$realToIndex');
+//       return;
+//     }
+
+//     print('🔧 Real indices: $realFromIndex → $realToIndex');
+
+//     // 🚀 TabListProvider의 간단한 reorderTab 메서드 호출!
+//     tabListNotifier.reorderTab(realFromIndex, realToIndex);
+
+//     print('✅ Index change applied successfully');
+//   }
+
+//   /// 디버그 정보 출력
+//   void printDebugInfo() {
+//     print('🐛 Debug Info:\n${state.debugInfo}');
+//   }
+// }
 
 ```
 ## lib/feature/terminal/provider/tab_list_provider.dart
@@ -4502,83 +4614,89 @@ part 'tab_list_provider.g.dart';
 @Riverpod(dependencies: [ActiveTab])
 class TabList extends _$TabList {
   @override
-  Map<String, TabInfo> build() {
-    return {
-      TabType.home.value: TabInfo(
+  List<TabInfo> build() {
+    // 🚀 List로 초기화 - 순서는 List index가 담당
+    return [
+      TabInfo(
         id: TabType.home.value,
         type: TabType.home,
         name: TabType.home.displayName,
         isClosable: false,
-        order: 0,
+        // order 필드 제거됨 - index 0
       ),
-      TabType.sftp.value: TabInfo(
+      TabInfo(
         id: TabType.sftp.value,
         type: TabType.sftp,
         name: TabType.sftp.displayName,
         isClosable: false,
-        order: 1,
+        // order 필드 제거됨 - index 1
       ),
-    };
+    ];
   }
 
-  /// 새 터미널 탭 추가
+  /// 🚀 새 터미널 탭 추가 - 매우 간단!
   void addTerminalTab() {
-    final currentTabs = state;
     final terminalCount =
-        currentTabs.values.where((tab) => tab.type == TabType.terminal).length;
+        state.where((tab) => tab.type == TabType.terminal).length;
 
     final newTabId = 'terminal_${DateTime.now().millisecondsSinceEpoch}';
-
-    // 마지막 order 계산
-    final maxOrder = currentTabs.values.isNotEmpty
-        ? currentTabs.values
-            .map((tab) => tab.order)
-            .reduce((a, b) => a > b ? a : b)
-        : -1;
 
     final newTab = TabInfo(
       id: newTabId,
       type: TabType.terminal,
       name: 'Terminal ${terminalCount + 1}',
       isClosable: true,
-      order: maxOrder + 1,
+      // order 필드 제거됨 - List.add()로 자동으로 마지막에 추가
     );
 
-    state = {...currentTabs, newTabId: newTab};
+    // 🚀 단순 추가!
+    state = [...state, newTab];
 
     // 새로 추가된 탭으로 이동
     ref.read(activeTabProvider.notifier).setTab(newTabId);
   }
 
-  /// 탭 제거
+  /// 🚀 탭 제거 - 자동 재정렬!
   void removeTab(String tabId) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToRemove = currentTabs[tabId];
+    final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
-    if (tabToRemove == null) return;
+    if (tabIndex == -1) {
+      print('❌ Tab not found: $tabId');
+      return;
+    }
+
+    final tabToRemove = state[tabIndex];
 
     // 고정 탭은 제거할 수 없음
-    if (!tabToRemove.isClosable) return;
+    if (!tabToRemove.isClosable) {
+      print('❌ Cannot remove fixed tab: $tabId');
+      return;
+    }
 
-    currentTabs.remove(tabId);
-    state = currentTabs;
+    // 🚀 간단한 제거 - 순서 자동 재정렬됨!
+    final newState = List<TabInfo>.from(state);
+    newState.removeAt(tabIndex);
+    state = newState;
 
     // 제거된 탭이 현재 활성 탭이었다면 Home으로 이동
     final activeTabId = ref.read(activeTabProvider);
     if (activeTabId == tabId) {
       ref.read(activeTabProvider.notifier).goToHome();
     }
+
+    print('✅ Tab removed: $tabId (index: $tabIndex)');
   }
 
   /// 🆕 안전한 탭 제거 (활성 탭 변경하지 않음)
   void removeTabSafely(String tabId) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToRemove = currentTabs[tabId];
+    final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
-    if (tabToRemove == null) {
+    if (tabIndex == -1) {
       print('❌ Tab not found for removal: $tabId');
       return;
     }
+
+    final tabToRemove = state[tabIndex];
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) {
@@ -4595,134 +4713,96 @@ class TabList extends _$TabList {
       return; // 분할 작업에서는 활성 탭을 제거하지 않음
     }
 
-    // 안전하게 탭만 제거 (활성 탭 변경 없음)
-    currentTabs.remove(tabId);
-    state = currentTabs;
+    // 🚀 안전하게 탭만 제거 (활성 탭 변경 없음)
+    final newState = List<TabInfo>.from(state);
+    newState.removeAt(tabIndex);
+    state = newState;
 
-    print('✅ Tab safely removed: $tabId');
+    print('✅ Tab safely removed: $tabId (index: $tabIndex)');
   }
 
   /// 탭 이름 변경
   void renameTab(String tabId, String newName) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tab = currentTabs[tabId];
+    final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
-    if (tab != null) {
-      currentTabs[tabId] = tab.copyWith(name: newName);
-      state = currentTabs;
-    }
-  }
-
-  /// 탭 순서 변경 (드래그 앤 드롭용)
-  void reorderTab(String tabId, int targetIndex) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToMove = currentTabs[tabId];
-
-    if (tabToMove == null || !tabToMove.isClosable) return;
-
-    // 고정 탭 개수 계산
-    final fixedTabCount =
-        currentTabs.values.where((tab) => !tab.isClosable).length;
-
-    // 타겟 인덱스 조정 (고정 탭 이후로만 이동 가능)
-    final adjustedTargetIndex =
-        targetIndex < fixedTabCount ? fixedTabCount : targetIndex;
-
-    // 전체 탭 리스트 (순서대로 정렬)
-    final orderedTabs = currentTabs.values.toList();
-    orderedTabs.sort((a, b) => a.order.compareTo(b.order));
-
-    // 범위 체크
-    if (adjustedTargetIndex < 0 || adjustedTargetIndex >= orderedTabs.length) {
+    if (tabIndex == -1) {
+      print('❌ Tab not found for rename: $tabId');
       return;
     }
 
-    // 새로운 order 값들 계산
-    final updatedTabs = <String, TabInfo>{};
+    final newState = List<TabInfo>.from(state);
+    newState[tabIndex] = newState[tabIndex].copyWith(name: newName);
+    state = newState;
 
-    // 기존 탭들의 order를 재정렬
-    int newOrder = 0;
-    for (int i = 0; i < orderedTabs.length; i++) {
-      final tab = orderedTabs[i];
-
-      if (tab.id == tabId) {
-        // 드래그 중인 탭은 건너뛰기 (나중에 타겟 위치에 삽입)
-        continue;
-      }
-
-      if (newOrder == adjustedTargetIndex) {
-        // 타겟 위치에 드래그 중인 탭 삽입
-        updatedTabs[tabId] = tabToMove.copyWith(order: newOrder);
-        newOrder++;
-      }
-
-      // 기존 탭 추가
-      updatedTabs[tab.id] = tab.copyWith(order: newOrder);
-      newOrder++;
-    }
-
-    // 마지막 위치에 삽입하는 경우
-    if (!updatedTabs.containsKey(tabId)) {
-      updatedTabs[tabId] = tabToMove.copyWith(order: adjustedTargetIndex);
-    }
-
-    state = updatedTabs;
+    print('✅ Tab renamed: $tabId → $newName');
   }
 
-  /// order 기반 탭 순서 변경 (새로운 드래그 앤 드롭용)
-  void reorderTabByOrder(String tabId, int fromOrder, int toOrder) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToMove = currentTabs[tabId];
-
-    if (tabToMove == null || !tabToMove.isClosable) {
-      print('❌ Cannot reorder: tab not found or not closable');
+  /// 🚀 탭 순서 변경 (드래그 앤 드롭용) - 혁신적으로 간단!
+  void reorderTab(int fromIndex, int toIndex) {
+    // 인덱스 유효성 검사
+    if (fromIndex < 0 ||
+        fromIndex >= state.length ||
+        toIndex < 0 ||
+        toIndex >= state.length) {
+      print(
+          '❌ Invalid index: fromIndex=$fromIndex, toIndex=$toIndex, length=${state.length}');
       return;
     }
 
-    print('🔧 Reordering $tabId from order $fromOrder to order $toOrder');
+    final tabToMove = state[fromIndex];
 
-    // 순서대로 정렬된 탭 리스트
-    final sortedTabs = currentTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    final updatedTabs = <String, TabInfo>{};
-
-    // 모든 탭의 새로운 order 계산
-    for (final tab in sortedTabs) {
-      if (tab.id == tabId) {
-        // 드래그 중인 탭은 타겟 order로 설정
-        updatedTabs[tab.id] = tab.copyWith(order: toOrder);
-        print('  └─ ${tab.name}: ${tab.order} → $toOrder (moved)');
-      } else if (fromOrder < toOrder) {
-        // 뒤로 이동하는 경우: 중간 탭들을 앞으로 이동
-        if (tab.order > fromOrder && tab.order <= toOrder) {
-          final newOrder = tab.order - 1;
-          updatedTabs[tab.id] = tab.copyWith(order: newOrder);
-          print('  └─ ${tab.name}: ${tab.order} → $newOrder (shifted left)');
-        } else {
-          updatedTabs[tab.id] = tab; // 변경 없음
-          print('  └─ ${tab.name}: ${tab.order} (no change)');
-        }
-      } else {
-        // 앞으로 이동하는 경우: 중간 탭들을 뒤로 이동
-        if (tab.order >= toOrder && tab.order < fromOrder) {
-          final newOrder = tab.order + 1;
-          updatedTabs[tab.id] = tab.copyWith(order: newOrder);
-          print('  └─ ${tab.name}: ${tab.order} → $newOrder (shifted right)');
-        } else {
-          updatedTabs[tab.id] = tab; // 변경 없음
-          print('  └─ ${tab.name}: ${tab.order} (no change)');
-        }
-      }
+    // 고정 탭은 이동할 수 없음
+    if (!tabToMove.isClosable) {
+      print('❌ Cannot move fixed tab: ${tabToMove.name}');
+      return;
     }
 
-    state = updatedTabs;
+    // 🚀 혁신적으로 간단한 이동!
+    final newState = List<TabInfo>.from(state);
+    final tab = newState.removeAt(fromIndex);
+    newState.insert(toIndex, tab);
+    state = newState;
 
-    // 결과 확인
-    final resultTabs = updatedTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
     print(
-        '📋 Final order: ${resultTabs.map((tab) => '${tab.name}(${tab.order})').join(', ')}');
+        '✅ Tab reordered: ${tabToMove.name} from index $fromIndex to $toIndex');
+  }
+
+  /// 🆕 ID로 탭 찾기 (헬퍼 메서드)
+  TabInfo? findTabById(String tabId) {
+    try {
+      return state.firstWhere((tab) => tab.id == tabId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 🆕 ID로 탭 인덱스 찾기 (헬퍼 메서드)
+  int findTabIndexById(String tabId) {
+    return state.indexWhere((tab) => tab.id == tabId);
+  }
+
+  /// 🆕 특정 타입의 탭들 가져오기
+  List<TabInfo> getTabsByType(TabType type) {
+    return state.where((tab) => tab.type == type).toList();
+  }
+
+  /// 🆕 드래그 가능한 탭들만 가져오기 (closable 탭들)
+  List<TabInfo> getDraggableTabs() {
+    return state.where((tab) => tab.isClosable).toList();
+  }
+
+  /// 🆕 고정 탭들 가져오기 (HOME, SFTP)
+  List<TabInfo> getFixedTabs() {
+    return state.where((tab) => !tab.isClosable).toList();
+  }
+
+  /// 🚀 디버그: 현재 탭 순서 출력
+  void printTabOrder() {
+    print('📋 Current tab order:');
+    for (int i = 0; i < state.length; i++) {
+      final tab = state[i];
+      print('  [$i] ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
+    }
   }
 }
 
@@ -4759,6 +4839,216 @@ class ActiveTab extends _$ActiveTab {
 }
 
 ```
+## lib/feature/terminal/provider/terminal_drag_provider.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../model/tab_info.dart';
+import '../model/terminal_drag_data.dart';
+import '../model/terminal_drag_state.dart'; // 🚀 정확한 파일명으로 변경
+import 'tab_list_provider.dart';
+
+part 'terminal_drag_provider.g.dart';
+
+@Riverpod(dependencies: [TabList])
+class TerminalDrag extends _$TerminalDrag {
+  @override
+  TerminalDragState build() {
+    return TerminalDragState.initial;
+  }
+
+  /// 🚀 드래그 시작 (통합 버전) - 탭에서 드래그
+  void startTabDrag(String tabId) {
+    final tabList = ref.read(tabListProvider);
+
+    // 🚀 드래그 가능한 탭들만 필터링 (List 기반)
+    final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
+
+    // 드래그 중인 탭이 존재하는지 확인
+    final draggingTab =
+        draggableTabs.where((tab) => tab.id == tabId).firstOrNull;
+    if (draggingTab == null) {
+      print('❌ Tab not found for drag: $tabId');
+      return;
+    }
+
+    print(
+        '🚀 Start tab drag: ${draggingTab.name} (index ${draggableTabs.indexOf(draggingTab)})');
+
+    // 🚀 TerminalDragData 생성 (탭에서 시작)
+    final dragData = TerminalDragData(
+      terminalId: tabId,
+      displayName: draggingTab.name,
+      source: DragSource.tab,
+    );
+
+    state = state.startDrag(
+      tabs: draggableTabs,
+      dragData: dragData,
+    );
+  }
+
+  /// 🆕 패널에서 드래그 시작 (추후 구현용)
+  void startPanelDrag(String terminalId, String displayName) {
+    final tabList = ref.read(tabListProvider);
+    final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
+
+    print('🚀 Start panel drag: $displayName ($terminalId)');
+
+    // 🚀 TerminalDragData 생성 (패널에서 시작)
+    final dragData = TerminalDragData(
+      terminalId: terminalId,
+      displayName: displayName,
+      source: DragSource.panel,
+    );
+
+    state = state.startDrag(
+      tabs: draggableTabs,
+      dragData: dragData,
+    );
+  }
+
+  /// 🚀 타겟 index 업데이트 - 동일
+  void updateTarget(int newTargetIndex, {Offset? dragPosition}) {
+    if (!state.isDragging) {
+      print('❌ Cannot update target: not dragging');
+      return;
+    }
+
+    // 🚀 유효한 index인지 확인
+    if (newTargetIndex < 0 || newTargetIndex >= state.currentTabs.length) {
+      print(
+          '❌ Target index out of range: $newTargetIndex (max: ${state.currentTabs.length - 1})');
+      return;
+    }
+
+    final targetTab = state.currentTabs[newTargetIndex];
+
+    // 자기 자신에게 드롭하는 것도 허용 (원래 자리로 돌아가기)
+    final draggingIndex = state.draggingIndex;
+    if (draggingIndex == newTargetIndex) {
+      print('🔄 Drop on self: ${targetTab.name} (return to original position)');
+    } else {
+      print('🎯 Update target: index $newTargetIndex (${targetTab.name})');
+    }
+
+    state = state.updateTarget(
+      newTargetIndex: newTargetIndex,
+      newDragPosition: dragPosition,
+    );
+  }
+
+  /// 드래그 위치 업데이트 (타겟 index는 유지)
+  void updatePosition(Offset position) {
+    if (!state.isDragging) return;
+
+    state = state.updatePosition(position);
+  }
+
+  /// 🚀 드래그 종료 (실제 순서 변경) - source 체크 추가
+  void endDrag() {
+    if (!state.isDragging) {
+      print('❌ Cannot end drag: not dragging');
+      return;
+    }
+
+    final draggingData = state.draggingData!;
+    final targetIndex = state.targetIndex;
+    final draggingIndex = state.draggingIndex;
+
+    print('✅ End drag: ${draggingData.debugInfo}');
+
+    // expectedResult의 순서 표시 (디버그용)
+    final expectedOrder = state.expectedResult
+        .asMap()
+        .entries
+        .map((e) => '${e.value.name}[${e.key}]')
+        .join(', ');
+    print('📋 Expected result: $expectedOrder');
+
+    // 🚀 source에 따른 처리 분기
+    switch (draggingData.source) {
+      case DragSource.tab:
+        _handleTabDragEnd(draggingData, targetIndex, draggingIndex);
+        break;
+      case DragSource.panel:
+        _handlePanelDragEnd(draggingData, targetIndex);
+        break;
+    }
+
+    // 드래그 상태 초기화
+    state = state.endDrag();
+  }
+
+  /// 탭 드래그 종료 처리
+  void _handleTabDragEnd(
+      TerminalDragData dragData, int? targetIndex, int? draggingIndex) {
+    // 실제 순서 변경 적용 (기존 로직과 동일)
+    if (targetIndex != null &&
+        draggingIndex != null &&
+        targetIndex != draggingIndex) {
+      print('🔄 Applying tab index change...');
+      _applyTabIndexChange(dragData.terminalId, draggingIndex, targetIndex);
+    } else {
+      print('📌 No tab index change needed');
+    }
+  }
+
+  /// 패널 드래그 종료 처리 (추후 구현)
+  void _handlePanelDragEnd(TerminalDragData dragData, int? targetIndex) {
+    print('🔄 Panel drag ended: ${dragData.debugInfo}');
+    // TODO: 패널 드래그 처리 로직 추가 (Phase 3-5에서 구현)
+  }
+
+  /// 드래그 취소
+  void cancelDrag() {
+    if (!state.isDragging) return;
+
+    print('❌ Cancel drag: ${state.draggingData?.debugInfo}');
+    state = state.endDrag();
+  }
+
+  /// 🚀 실제 탭 순서 변경 적용 (기존과 동일)
+  void _applyTabIndexChange(String draggingTabId, int fromIndex, int toIndex) {
+    final tabListNotifier = ref.read(tabListProvider.notifier);
+
+    print(
+        '🔧 Index change: $draggingTabId from index $fromIndex to index $toIndex');
+
+    // 🚀 전체 탭 리스트에서의 실제 인덱스 계산
+    final allTabs = ref.read(tabListProvider);
+    final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
+
+    // 드래그 가능한 탭들 중에서의 인덱스를 전체 탭 리스트의 인덱스로 변환
+    final realFromIndex = allTabs.indexWhere((tab) => tab.id == draggingTabId);
+
+    // toIndex에 해당하는 드래그 가능한 탭의 실제 인덱스 찾기
+    final targetDraggableTab = draggableTabs[toIndex];
+    final realToIndex =
+        allTabs.indexWhere((tab) => tab.id == targetDraggableTab.id);
+
+    if (realFromIndex == -1 || realToIndex == -1) {
+      print(
+          '❌ Could not find real indices: realFromIndex=$realFromIndex, realToIndex=$realToIndex');
+      return;
+    }
+
+    print('🔧 Real indices: $realFromIndex → $realToIndex');
+
+    // 🚀 TabListProvider의 간단한 reorderTab 메서드 호출!
+    tabListNotifier.reorderTab(realFromIndex, realToIndex);
+
+    print('✅ Index change applied successfully');
+  }
+
+  /// 디버그 정보 출력
+  void printDebugInfo() {
+    print('🐛 Debug Info:\n${state.debugInfo}');
+  }
+}
+
+```
 ## lib/feature/terminal/ui/split_drop_zone.dart
 ```dart
 import 'package:flutter/material.dart';
@@ -4766,9 +5056,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 import '../model/split_layout_state.dart';
-import '../model/tab_info.dart';
+import '../model/terminal_drag_data.dart'; // 🚀 변경
 import '../provider/split_layout_provider.dart';
 import '../provider/tab_provider.dart';
+import '../provider/terminal_drag_provider.dart'; // 🚀 변경
 
 enum SplitDirection {
   // 큰 분할 (4개)
@@ -4793,7 +5084,7 @@ class SplitDropZone extends ConsumerStatefulWidget {
   final SplitDirection direction;
 
   /// 현재 활성 터미널 탭 정보
-  final TabInfo currentTab;
+  final TerminalDragData currentTab;
 
   /// hover 상태 변경 콜백
   final Function(SplitDirection? direction) onHoverChanged;
@@ -4817,26 +5108,27 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
     // 🆕 현재 활성 탭 ID 가져오기
     final currentActiveTabId = ref.watch(activeTabProvider);
 
-    return DragTarget<TabInfo>(
+    return DragTarget<TerminalDragData>(
+      // 🚀 변경
       onWillAcceptWithDetails: (data) {
-        // 터미널 탭만 허용하고, 자기 자신(현재 활성 탭)은 제외
-        final isTerminalTab = data.data.type.value == 'terminal';
-        final isNotSelf = data.data.id != currentActiveTabId;
+        // 🚀 탭에서 드래그된 터미널만 허용하고, 자기 자신(현재 활성 탭)은 제외
+        final isFromTab = data.data.isFromTab;
+        final isTerminalTab = data.data.terminalId != currentActiveTabId;
 
         print(
-            '🔍 Will accept? Terminal: $isTerminalTab, NotSelf: $isNotSelf (${data.data.id} != $currentActiveTabId)');
+            '🔍 Will accept? FromTab: $isFromTab, NotSelf: $isTerminalTab (${data.data.terminalId} != $currentActiveTabId)');
 
-        return isTerminalTab && isNotSelf;
+        return isFromTab && isTerminalTab;
       },
       onMove: (details) {
         // 🆕 허용되지 않는 드래그라면 hover 이벤트도 차단
         final currentActiveTabId = ref.read(activeTabProvider);
-        final isTerminalTab = details.data.type.value == 'terminal';
-        final isNotSelf = details.data.id != currentActiveTabId;
+        final isFromTab = details.data.isFromTab;
+        final isTerminalTab = details.data.terminalId != currentActiveTabId;
 
-        if (!isTerminalTab || !isNotSelf) {
+        if (!isFromTab || !isTerminalTab) {
           print(
-              '🚫 Hover blocked: Terminal: $isTerminalTab, NotSelf: $isNotSelf');
+              '🚫 Hover blocked: FromTab: $isFromTab, NotSelf: $isTerminalTab');
           return; // hover 이벤트 차단
         }
 
@@ -4852,9 +5144,13 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
           widget.onHoverChanged(null); // hover 해제 알림
         }
       },
-      onAcceptWithDetails: (draggedTab) {
+      onAcceptWithDetails: (draggedData) {
+        // 🚀 변경
         // 🆕 실제 분할 실행
-        _executeSplit(draggedTab.data);
+        _executeSplit(draggedData.data);
+
+        // 🚨 드래그 상태 즉시 종료!
+        ref.read(terminalDragProvider.notifier).endDrag(); // 🚀 변경
 
         setState(() => _isHovered = false);
         widget.onHoverChanged(null); // hover 해제
@@ -4910,8 +5206,10 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
   }
 
   /// 🆕 실제 분할 실행
-  void _executeSplit(TabInfo draggedTab) {
-    print('🎯 Execute split: ${draggedTab.name} → ${widget.direction.name}');
+  void _executeSplit(TerminalDragData draggedData) {
+    // 🚀 변경
+    print(
+        '🎯 Execute split: ${draggedData.displayName} → ${widget.direction.name}');
 
     // SplitDirection을 SplitType과 PanelPosition으로 변환
     final splitInfo = _convertToSplitInfo(widget.direction);
@@ -4921,7 +5219,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
 
     // SplitLayoutProvider를 통해 실제 분할 실행
     ref.read(splitLayoutProvider.notifier).startSplit(
-          terminalId: draggedTab.id,
+          terminalId: draggedData.terminalId, // 🚀 변경
           splitType: splitInfo.splitType,
           targetPosition: splitInfo.targetPosition,
         );
@@ -5050,7 +5348,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
     }[widget.direction];
 
     print(
-        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.name}');
+        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.displayName}');
   }
 }
 
@@ -5337,11 +5635,13 @@ import 'package:penterm/core/theme/provider/theme_provider.dart';
 import '../core/ui/title_bar/app_title_bar.dart';
 import '../feature/terminal/model/enum_tab_type.dart';
 import '../feature/terminal/model/split_layout_state.dart';
-import '../feature/terminal/model/tab_drag_state.dart';
 import '../feature/terminal/model/tab_info.dart';
+import '../feature/terminal/model/terminal_drag_data.dart';
+import '../feature/terminal/model/terminal_drag_state.dart';
 import '../feature/terminal/provider/active_tabinfo_provider.dart';
 import '../feature/terminal/provider/split_layout_provider.dart';
-import '../feature/terminal/provider/tab_drag_provider.dart';
+import '../feature/terminal/provider/tab_list_provider.dart';
+import '../feature/terminal/provider/terminal_drag_provider.dart';
 import '../feature/terminal/ui/split_drop_zone.dart';
 
 class MainScreen extends ConsumerWidget {
@@ -5350,7 +5650,9 @@ class MainScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTabInfo = ref.watch(activeTabInfoProvider);
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider);
+    final tabList = ref.watch(tabListProvider);
+
     return Scaffold(
       body: Stack(
         children: [
@@ -5408,9 +5710,9 @@ class MainScreen extends ConsumerWidget {
                       Color textColor = Colors.white;
                       if (line.contains('Dragging:')) {
                         textColor = ref.color.neonPurple;
-                      } else if (line.contains('Target Order:')) {
+                      } else if (line.contains('Target Index:')) {
                         textColor = ref.color.neonGreen;
-                      } else if (line.contains('Place Order:')) {
+                      } else if (line.contains('Place Index:')) {
                         textColor = ref.color.neonBlue;
                       } else if (line.contains('Expected:')) {
                         textColor = ref.color.neonPink;
@@ -5486,6 +5788,93 @@ class MainScreen extends ConsumerWidget {
               },
             ),
           ),
+
+          // 🆕 드래그 상태 디버그 정보 + Split 후 상태 확인
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ref.color.neonBlue.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🔍 DRAG STATE DEBUG',
+                    style: ref.font.monoBoldText10.copyWith(
+                      color: ref.color.neonBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'isDragging: ${dragState.isDragging}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: dragState.isDragging ? Colors.red : Colors.green,
+                    ),
+                  ),
+                  Text(
+                    'draggingTerminalId: ${dragState.draggingTerminalId ?? 'null'}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'targetIndex: ${dragState.targetIndex ?? 'null'}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 🆕 탭 순서 디버그 정보
+          Positioned(
+            bottom: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ref.color.neonGreen.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '📋 TAB ORDER DEBUG',
+                    style: ref.font.monoBoldText10.copyWith(
+                      color: ref.color.neonGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...tabList.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final tab = entry.value;
+                    final isActive = activeTabInfo?.id == tab.id;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        '[$index] ${tab.name} ${isActive ? '🔥' : ''}',
+                        style: ref.font.monoRegularText10.copyWith(
+                          color: isActive ? ref.color.neonGreen : Colors.white,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -5551,7 +5940,7 @@ class MainScreen extends ConsumerWidget {
   }
 
   Widget _buildTerminalContent(TabInfo tabInfo, WidgetRef ref) {
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider);
     final splitState = ref.watch(currentTabSplitStateProvider);
 
     // 🆕 분할 상태에 따른 렌더링
@@ -5706,13 +6095,13 @@ class MainScreen extends ConsumerWidget {
 
   /// 단일 터미널 컨텐츠 (기존 로직)
   Widget _buildSingleTerminalContent(
-      TabInfo tabInfo, TabDragState dragState, WidgetRef ref) {
+      TabInfo tabInfo, TerminalDragState dragState, WidgetRef ref) {
     // 🆕 현재 탭의 분할 상태 확인
     final splitState = ref.watch(currentTabSplitStateProvider);
 
     // 터미널 탭이 드래그 중인지 확인
     final isTerminalDragging =
-        dragState.isDragging && dragState.draggingTab?.type.value == 'terminal';
+        dragState.isDragging && dragState.draggingData?.isFromTab == true;
 
     // 🆕 이미 분할된 상태라면 드롭존 숨기기
     final shouldShowDropZones = isTerminalDragging && !splitState.isSplit;
@@ -5771,7 +6160,14 @@ class MainScreen extends ConsumerWidget {
         ),
 
         // 🆕 분할되지 않은 상태에서만 드롭존 표시
-        if (shouldShowDropZones) _TerminalSplitHandler(tabInfo: tabInfo),
+        if (shouldShowDropZones)
+          _TerminalSplitHandler(
+            currentTab: TerminalDragData(
+              terminalId: tabInfo.id,
+              displayName: tabInfo.name,
+              source: DragSource.tab,
+            ),
+          ),
       ],
     );
   }
@@ -5795,9 +6191,9 @@ class MainScreen extends ConsumerWidget {
 
 /// 터미널 분할 처리 위젯 (드롭존 + 전체 화면 미리보기)
 class _TerminalSplitHandler extends ConsumerStatefulWidget {
-  final TabInfo tabInfo;
+  final TerminalDragData currentTab;
 
-  const _TerminalSplitHandler({required this.tabInfo});
+  const _TerminalSplitHandler({required this.currentTab});
 
   @override
   ConsumerState<_TerminalSplitHandler> createState() =>
@@ -5838,7 +6234,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height,
                   child: SplitDropZone(
                     direction: SplitDirection.left,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5851,7 +6247,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height,
                   child: SplitDropZone(
                     direction: SplitDirection.right,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5864,7 +6260,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.top,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5877,7 +6273,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.bottom,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5892,7 +6288,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.leftSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5905,7 +6301,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.rightSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5918,7 +6314,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 9,
                   child: SplitDropZone(
                     direction: SplitDirection.topSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5931,7 +6327,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 9,
                   child: SplitDropZone(
                     direction: SplitDirection.bottomSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5946,7 +6342,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 18,
                   child: SplitDropZone(
                     direction: SplitDirection.topCenter,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5959,7 +6355,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 18,
                   child: SplitDropZone(
                     direction: SplitDirection.bottomCenter,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -5979,10 +6375,10 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
 
   /// 전체 화면 분할 미리보기
   Widget _buildFullScreenPreview(SplitDirection direction) {
-    final dragState = ref.watch(tabDragProvider);
-    final draggingTab = dragState.draggingTab;
+    final dragState = ref.watch(terminalDragProvider);
+    final draggingData = dragState.draggingData;
 
-    if (draggingTab == null) return const SizedBox.shrink();
+    if (draggingData == null) return const SizedBox.shrink();
 
     // 방향에 따라 새로운 터미널이 들어올 영역에만 오버레이 표시
     return LayoutBuilder(
@@ -5993,7 +6389,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
         return Stack(
           children: [
             // 방향별로 해당 영역에만 오버레이 표시
-            _buildDirectionOverlay(direction, width, height, draggingTab),
+            _buildDirectionOverlay(direction, width, height, draggingData),
           ],
         );
       },
@@ -6002,7 +6398,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
 
   /// 방향별 오버레이 생성
   Widget _buildDirectionOverlay(SplitDirection direction, double width,
-      double height, TabInfo draggingTab) {
+      double height, TerminalDragData draggingData) {
     switch (direction) {
       case SplitDirection.left:
       case SplitDirection.leftSmall:
@@ -6012,7 +6408,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           top: 0,
           width: width * 0.5,
           height: height,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
 
       case SplitDirection.right:
@@ -6023,7 +6419,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           top: 0,
           width: width * 0.5,
           height: height,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
 
       case SplitDirection.top:
@@ -6035,7 +6431,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           top: 0,
           width: width,
           height: height * 0.5,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
 
       case SplitDirection.bottom:
@@ -6047,14 +6443,14 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           bottom: 0,
           width: width,
           height: height * 0.5,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
     }
   }
 
   /// 새로운 터미널 영역 오버레이
   Widget _buildNewTerminalOverlay(
-      TabInfo draggingTab, SplitDirection direction) {
+      TerminalDragData draggingData, SplitDirection direction) {
     return Container(
       decoration: BoxDecoration(
         color: ref.theme.color.surface.withOpacity(0.9), // 어두운 오버레이
@@ -6075,7 +6471,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
             ),
             const SizedBox(height: 12),
             Text(
-              draggingTab.name,
+              draggingData.displayName,
               style: ref.font.semiBoldText18.copyWith(
                 color: Colors.white.withOpacity(0.9),
               ),

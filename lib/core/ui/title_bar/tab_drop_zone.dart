@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
-import '../../../feature/terminal/model/tab_info.dart';
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
+import '../../../feature/terminal/model/terminal_drag_data.dart'; // 🚀 변경
+import '../../../feature/terminal/provider/terminal_drag_provider.dart'; // 🚀 변경
 
 class TabDropZone extends ConsumerStatefulWidget {
-  /// 🚀 이 드롭 영역이 대표하는 탭의 index (order 대신 index 사용)
+  /// 🚀 이 드롭 영역이 대표하는 탭의 index
   final int targetIndex;
 
   /// 이 드롭 영역이 대표하는 탭의 이름 (디버그용)
@@ -18,7 +18,7 @@ class TabDropZone extends ConsumerStatefulWidget {
 
   const TabDropZone({
     super.key,
-    required this.targetIndex, // 🚀 targetOrder → targetIndex 변경
+    required this.targetIndex,
     required this.targetTabName,
     this.width = 140.0,
     this.height = 38,
@@ -33,7 +33,7 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
 
   @override
   Widget build(BuildContext context) {
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
 
     // 드래그 중이 아니면 빈 공간만 차지
     if (!dragState.isDragging) {
@@ -46,18 +46,24 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
     // 🚀 현재 이 영역이 타겟인지 확인 (index 기반)
     final isTarget = dragState.targetIndex == widget.targetIndex;
 
-    return DragTarget<TabInfo>(
+    return DragTarget<TerminalDragData>(
+      // 🚀 변경
       onWillAcceptWithDetails: (data) {
-        // 🚀 드래그 중인 탭이 유효한지 확인 (List 기반)
-        return dragState.currentTabs.any((tab) => tab.id == data.data.id);
+        // 🚀 탭에서 드래그된 데이터만 허용
+        final isFromTab = data.data.isFromTab;
+        final isValidTerminal =
+            dragState.currentTabs.any((tab) => tab.id == data.data.terminalId);
+
+        return isFromTab && isValidTerminal;
       },
       onMove: (details) {
         // 마우스가 이 영역 위에 있을 때 타겟으로 설정
         if (!_isHovered) {
           setState(() => _isHovered = true);
 
-          ref.read(tabDragProvider.notifier).updateTarget(
-                widget.targetIndex, // 🚀 targetOrder → targetIndex
+          ref.read(terminalDragProvider.notifier).updateTarget(
+                // 🚀 변경
+                widget.targetIndex,
                 dragPosition: details.offset,
               );
         }
@@ -66,12 +72,13 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
         // 마우스가 이 영역을 벗어날 때
         setState(() => _isHovered = false);
       },
-      onAcceptWithDetails: (draggedTab) {
+      onAcceptWithDetails: (draggedData) {
+        // 🚀 변경
         // 실제 드롭이 발생했을 때 - 이제 실제 이동 수행
-        final draggedTabIndex = dragState.currentTabs
-            .indexWhere((tab) => tab.id == draggedTab.data.id);
+        final draggedIndex = dragState.currentTabs
+            .indexWhere((tab) => tab.id == draggedData.data.terminalId);
 
-        if (draggedTabIndex == widget.targetIndex) {
+        if (draggedIndex == widget.targetIndex) {
           print(
               '🔄 Dropped on self: ${widget.targetTabName} (return to original position)');
           print('📋 No change needed - same position');
@@ -79,11 +86,11 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
           print(
               '🎯 Dropped on zone: ${widget.targetTabName} (index ${widget.targetIndex})');
           print(
-              '📋 Moving ${draggedTab.data.name} from index $draggedTabIndex to index ${widget.targetIndex}');
+              '📋 Moving ${draggedData.data.displayName} from index $draggedIndex to index ${widget.targetIndex}');
         }
 
         // 실제 이동 수행
-        ref.read(tabDragProvider.notifier).endDrag();
+        ref.read(terminalDragProvider.notifier).endDrag(); // 🚀 변경
         setState(() => _isHovered = false);
       },
       builder: (context, candidateData, rejectedData) {

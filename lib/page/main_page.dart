@@ -5,12 +5,13 @@ import 'package:penterm/core/theme/provider/theme_provider.dart';
 import '../core/ui/title_bar/app_title_bar.dart';
 import '../feature/terminal/model/enum_tab_type.dart';
 import '../feature/terminal/model/split_layout_state.dart';
-import '../feature/terminal/model/tab_drag_state.dart';
 import '../feature/terminal/model/tab_info.dart';
+import '../feature/terminal/model/terminal_drag_data.dart';
+import '../feature/terminal/model/terminal_drag_state.dart';
 import '../feature/terminal/provider/active_tabinfo_provider.dart';
 import '../feature/terminal/provider/split_layout_provider.dart';
-import '../feature/terminal/provider/tab_drag_provider.dart';
 import '../feature/terminal/provider/tab_list_provider.dart';
+import '../feature/terminal/provider/terminal_drag_provider.dart';
 import '../feature/terminal/ui/split_drop_zone.dart';
 
 class MainScreen extends ConsumerWidget {
@@ -19,8 +20,8 @@ class MainScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTabInfo = ref.watch(activeTabInfoProvider);
-    final dragState = ref.watch(tabDragProvider);
-    final tabList = ref.watch(tabListProvider); // 🚀 List 기반
+    final dragState = ref.watch(terminalDragProvider);
+    final tabList = ref.watch(tabListProvider);
 
     return Scaffold(
       body: Stack(
@@ -80,10 +81,8 @@ class MainScreen extends ConsumerWidget {
                       if (line.contains('Dragging:')) {
                         textColor = ref.color.neonPurple;
                       } else if (line.contains('Target Index:')) {
-                        // 🚀 Target Order → Target Index
                         textColor = ref.color.neonGreen;
                       } else if (line.contains('Place Index:')) {
-                        // 🚀 Place Order → Place Index
                         textColor = ref.color.neonBlue;
                       } else if (line.contains('Expected:')) {
                         textColor = ref.color.neonPink;
@@ -103,51 +102,6 @@ class MainScreen extends ConsumerWidget {
                 ),
               ),
             ),
-
-          /// 🆕 드래그 상태 디버그 정보 + Split 후 상태 확인
-          Positioned(
-            bottom: 10,
-            right: 10,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: ref.color.neonBlue.withOpacity(0.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '🔍 DRAG STATE DEBUG',
-                    style: ref.font.monoBoldText10.copyWith(
-                      color: ref.color.neonBlue,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'isDragging: ${dragState.isDragging}',
-                    style: ref.font.monoRegularText10.copyWith(
-                      color: dragState.isDragging ? Colors.red : Colors.green,
-                    ),
-                  ),
-                  Text(
-                    'draggingTabId: ${dragState.draggingTabId ?? 'null'}',
-                    style: ref.font.monoRegularText10.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    'targetIndex: ${dragState.targetIndex ?? 'null'}',
-                    style: ref.font.monoRegularText10.copyWith(
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
 
           // 🆕 분할 상태 디버그 정보
           Positioned(
@@ -202,6 +156,51 @@ class MainScreen extends ConsumerWidget {
                   ),
                 );
               },
+            ),
+          ),
+
+          // 🆕 드래그 상태 디버그 정보 + Split 후 상태 확인
+          Positioned(
+            bottom: 10,
+            right: 10,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ref.color.neonBlue.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '🔍 DRAG STATE DEBUG',
+                    style: ref.font.monoBoldText10.copyWith(
+                      color: ref.color.neonBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'isDragging: ${dragState.isDragging}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: dragState.isDragging ? Colors.red : Colors.green,
+                    ),
+                  ),
+                  Text(
+                    'draggingTerminalId: ${dragState.draggingTerminalId ?? 'null'}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'targetIndex: ${dragState.targetIndex ?? 'null'}',
+                    style: ref.font.monoRegularText10.copyWith(
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -311,7 +310,7 @@ class MainScreen extends ConsumerWidget {
   }
 
   Widget _buildTerminalContent(TabInfo tabInfo, WidgetRef ref) {
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider);
     final splitState = ref.watch(currentTabSplitStateProvider);
 
     // 🆕 분할 상태에 따른 렌더링
@@ -362,62 +361,216 @@ class MainScreen extends ConsumerWidget {
     );
   }
 
-  /// 🆕 터미널이 있는 패널
+  /// 🆕 터미널이 있는 패널 (드래그 핸들 추가!)
   Widget _buildTerminalPanel(PanelInfo panel, WidgetRef ref) {
     return Container(
       width: double.infinity,
       height: double.infinity,
       color: ref.theme.color.secondaryVariant,
-      child: Stack(
+      child: Column(
         children: [
-          // 🆕 패널 상단 드래그 핸들 (3단계에서 구현)
-          // TODO: 3단계에서 패널 드래그 핸들 추가
+          // 🚀 패널 드래그 핸들 (새로 추가!)
+          _buildPanelDragHandle(panel, ref),
 
           // 터미널 컨텐츠
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.terminal,
-                  size: 48,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Terminal: ${panel.terminalId}',
-                  style: ref.font.semiBoldText18.copyWith(
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.terminal,
+                    size: 48,
                     color: Colors.white,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Panel: ${panel.position.name}',
-                  style: ref.font.regularText14.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                if (panel.isActive)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: ref.color.primary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: ref.color.primary, width: 1),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Terminal: ${panel.terminalId}',
+                    style: ref.font.semiBoldText18.copyWith(
+                      color: Colors.white,
                     ),
-                    child: Text(
-                      'ACTIVE',
-                      style: ref.font.semiBoldText12.copyWith(
-                        color: ref.color.primary,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Panel: ${panel.position.name}',
+                    style: ref.font.regularText14.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                  if (panel.isActive)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ref.color.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: ref.color.primary, width: 1),
+                      ),
+                      child: Text(
+                        'ACTIVE',
+                        style: ref.font.semiBoldText12.copyWith(
+                          color: ref.color.primary,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 🚀 새로 추가: 패널 드래그 핸들
+  Widget _buildPanelDragHandle(PanelInfo panel, WidgetRef ref) {
+    // 터미널 정보 가져오기 (실제로는 탭 정보에서 이름을 찾아야 함)
+    const terminalDisplayName = 'Terminal'; // 임시로 고정값, 나중에 실제 터미널 이름으로 변경
+
+    return Draggable<TerminalDragData>(
+      // 🎯 패널에서 드래그 시작!
+      data: TerminalDragData(
+        terminalId: panel.terminalId!,
+        displayName: terminalDisplayName,
+        source: DragSource.panel, // 패널에서 시작
+      ),
+      feedback: _buildPanelDragFeedback(panel, ref),
+      childWhenDragging: _buildDragHandleUI(panel, ref, isDragging: true),
+      onDragStarted: () {
+        print('🚀 Panel drag started: ${panel.terminalId}');
+        // 🎯 기존에 준비된 startPanelDrag 메서드 호출!
+        ref.read(terminalDragProvider.notifier).startPanelDrag(
+              panel.terminalId!,
+              terminalDisplayName,
+            );
+      },
+      onDragUpdate: (details) {
+        ref
+            .read(terminalDragProvider.notifier)
+            .updatePosition(details.globalPosition);
+      },
+      onDragEnd: (details) {
+        print('✅ Panel drag ended: ${panel.terminalId}');
+        ref.read(terminalDragProvider.notifier).endDrag();
+      },
+      onDraggableCanceled: (velocity, offset) {
+        print('❌ Panel drag canceled: ${panel.terminalId}');
+        ref.read(terminalDragProvider.notifier).cancelDrag();
+      },
+      child: _buildDragHandleUI(panel, ref, isDragging: false),
+    );
+  }
+
+  /// 드래그 핸들 UI
+  Widget _buildDragHandleUI(PanelInfo panel, WidgetRef ref,
+      {required bool isDragging}) {
+    return Container(
+      height: 28,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: panel.isActive
+            ? ref.color.primary.withOpacity(isDragging ? 0.3 : 0.1)
+            : ref.color.surface.withOpacity(isDragging ? 0.3 : 0.1),
+        border: Border(
+          bottom: BorderSide(
+            color: panel.isActive ? ref.color.primary : ref.color.border,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          // 드래그 아이콘
+          Icon(
+            Icons.drag_indicator,
+            size: 16,
+            color:
+                panel.isActive ? ref.color.primary : ref.color.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          // 터미널 정보
+          Expanded(
+            child: Text(
+              'Terminal: ${panel.terminalId}',
+              style: ref.font.semiBoldText12.copyWith(
+                color: panel.isActive
+                    ? ref.color.primary
+                    : ref.color.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // 패널 위치 표시
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: ref.color.surfaceVariant.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              panel.position.name.toUpperCase(),
+              style: ref.font.regularText10.copyWith(
+                color: ref.color.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  /// 패널 드래그 피드백 위젯
+  Widget _buildPanelDragFeedback(PanelInfo panel, WidgetRef ref) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 200,
+        height: 80,
+        decoration: BoxDecoration(
+          color: ref.color.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ref.color.primary, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: ref.color.primary.withOpacity(0.5),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: ref.color.neonPurple.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.terminal,
+                size: 24,
+                color: ref.color.primary,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Panel Dragging',
+                style: ref.font.semiBoldText12.copyWith(
+                  color: ref.color.primary,
+                ),
+              ),
+              Text(
+                panel.position.name,
+                style: ref.font.regularText10.copyWith(
+                  color: ref.color.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -466,13 +619,13 @@ class MainScreen extends ConsumerWidget {
 
   /// 단일 터미널 컨텐츠 (기존 로직)
   Widget _buildSingleTerminalContent(
-      TabInfo tabInfo, TabDragState dragState, WidgetRef ref) {
+      TabInfo tabInfo, TerminalDragState dragState, WidgetRef ref) {
     // 🆕 현재 탭의 분할 상태 확인
     final splitState = ref.watch(currentTabSplitStateProvider);
 
     // 터미널 탭이 드래그 중인지 확인
     final isTerminalDragging =
-        dragState.isDragging && dragState.draggingTab?.type.value == 'terminal';
+        dragState.isDragging && dragState.draggingData?.isFromTab == true;
 
     // 🆕 이미 분할된 상태라면 드롭존 숨기기
     final shouldShowDropZones = isTerminalDragging && !splitState.isSplit;
@@ -531,7 +684,14 @@ class MainScreen extends ConsumerWidget {
         ),
 
         // 🆕 분할되지 않은 상태에서만 드롭존 표시
-        if (shouldShowDropZones) _TerminalSplitHandler(tabInfo: tabInfo),
+        if (shouldShowDropZones)
+          _TerminalSplitHandler(
+            currentTab: TerminalDragData(
+              terminalId: tabInfo.id,
+              displayName: tabInfo.name,
+              source: DragSource.tab,
+            ),
+          ),
       ],
     );
   }
@@ -555,9 +715,9 @@ class MainScreen extends ConsumerWidget {
 
 /// 터미널 분할 처리 위젯 (드롭존 + 전체 화면 미리보기)
 class _TerminalSplitHandler extends ConsumerStatefulWidget {
-  final TabInfo tabInfo;
+  final TerminalDragData currentTab;
 
-  const _TerminalSplitHandler({required this.tabInfo});
+  const _TerminalSplitHandler({required this.currentTab});
 
   @override
   ConsumerState<_TerminalSplitHandler> createState() =>
@@ -598,7 +758,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height,
                   child: SplitDropZone(
                     direction: SplitDirection.left,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -611,7 +771,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height,
                   child: SplitDropZone(
                     direction: SplitDirection.right,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -624,7 +784,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.top,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -637,7 +797,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.bottom,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -652,7 +812,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.leftSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -665,7 +825,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 3,
                   child: SplitDropZone(
                     direction: SplitDirection.rightSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -678,7 +838,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 9,
                   child: SplitDropZone(
                     direction: SplitDirection.topSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -691,7 +851,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 9,
                   child: SplitDropZone(
                     direction: SplitDirection.bottomSmall,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -706,7 +866,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 18,
                   child: SplitDropZone(
                     direction: SplitDirection.topCenter,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -719,7 +879,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
                   height: height / 18,
                   child: SplitDropZone(
                     direction: SplitDirection.bottomCenter,
-                    currentTab: widget.tabInfo,
+                    currentTab: widget.currentTab,
                     onHoverChanged: _onHoverChanged,
                   ),
                 ),
@@ -739,10 +899,10 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
 
   /// 전체 화면 분할 미리보기
   Widget _buildFullScreenPreview(SplitDirection direction) {
-    final dragState = ref.watch(tabDragProvider);
-    final draggingTab = dragState.draggingTab;
+    final dragState = ref.watch(terminalDragProvider);
+    final draggingData = dragState.draggingData;
 
-    if (draggingTab == null) return const SizedBox.shrink();
+    if (draggingData == null) return const SizedBox.shrink();
 
     // 방향에 따라 새로운 터미널이 들어올 영역에만 오버레이 표시
     return LayoutBuilder(
@@ -753,7 +913,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
         return Stack(
           children: [
             // 방향별로 해당 영역에만 오버레이 표시
-            _buildDirectionOverlay(direction, width, height, draggingTab),
+            _buildDirectionOverlay(direction, width, height, draggingData),
           ],
         );
       },
@@ -762,7 +922,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
 
   /// 방향별 오버레이 생성
   Widget _buildDirectionOverlay(SplitDirection direction, double width,
-      double height, TabInfo draggingTab) {
+      double height, TerminalDragData draggingData) {
     switch (direction) {
       case SplitDirection.left:
       case SplitDirection.leftSmall:
@@ -772,7 +932,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           top: 0,
           width: width * 0.5,
           height: height,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
 
       case SplitDirection.right:
@@ -783,7 +943,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           top: 0,
           width: width * 0.5,
           height: height,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
 
       case SplitDirection.top:
@@ -795,7 +955,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           top: 0,
           width: width,
           height: height * 0.5,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
 
       case SplitDirection.bottom:
@@ -807,14 +967,14 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
           bottom: 0,
           width: width,
           height: height * 0.5,
-          child: _buildNewTerminalOverlay(draggingTab, direction),
+          child: _buildNewTerminalOverlay(draggingData, direction),
         );
     }
   }
 
   /// 새로운 터미널 영역 오버레이
   Widget _buildNewTerminalOverlay(
-      TabInfo draggingTab, SplitDirection direction) {
+      TerminalDragData draggingData, SplitDirection direction) {
     return Container(
       decoration: BoxDecoration(
         color: ref.theme.color.surface.withOpacity(0.9), // 어두운 오버레이
@@ -835,7 +995,7 @@ class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
             ),
             const SizedBox(height: 12),
             Text(
-              draggingTab.name,
+              draggingData.displayName,
               style: ref.font.semiBoldText18.copyWith(
                 color: Colors.white.withOpacity(0.9),
               ),

@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 import '../../../feature/terminal/model/tab_info.dart';
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
+import '../../../feature/terminal/model/terminal_drag_data.dart'; // 🚀 추가
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
+import '../../../feature/terminal/provider/terminal_drag_provider.dart'; // 🚀 변경
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 
@@ -32,41 +33,49 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
   @override
   Widget build(BuildContext context) {
     final isActive = widget.activeTabId == widget.tab.id;
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
 
     // 현재 탭이 드래그 중인지 확인
-    final isDragging = dragState.draggingTabId == widget.tab.id;
+    final isDragging =
+        dragState.isDragging && dragState.draggingTerminalId == widget.tab.id;
 
-    // Draggable로 감싸서 드래그 가능하게 만들기
-    return Draggable<TabInfo>(
-      data: widget.tab,
+    // 🚀 Draggable을 TerminalDragData로 변경
+    return Draggable<TerminalDragData>(
+      data: TerminalDragData(
+        terminalId: widget.tab.id,
+        displayName: widget.tab.name,
+        source: DragSource.tab, // 🚀 탭에서 시작
+      ),
       feedback: _buildDragFeedback(isActive),
       childWhenDragging: _buildTabContent(isActive, true), // 투명한 탭 유지
       onDragStarted: () {
         print('🚀 Drag started: ${widget.tab.name}');
-        ref.read(tabDragProvider.notifier).startDrag(widget.tab.id);
+        ref
+            .read(terminalDragProvider.notifier)
+            .startTabDrag(widget.tab.id); // 🚀 변경
       },
       onDragUpdate: (details) {
         ref
-            .read(tabDragProvider.notifier)
+            .read(terminalDragProvider.notifier)
             .updatePosition(details.globalPosition);
       },
       onDragEnd: (details) {
         print('✅ Drag ended: ${widget.tab.name}');
-        final dragState = ref.read(tabDragProvider);
+        final dragState = ref.read(terminalDragProvider);
 
         if (dragState.targetIndex != null) {
+          // 🚀 변경
           print('📋 Target found - will be handled by TabDropZone');
           // TabDropZone에서 endDrag()를 호출할 것임
         } else {
           print('📋 No target - returning to original position');
           // 드롭 영역 밖에서 끝난 경우 원래 자리로 복귀
-          ref.read(tabDragProvider.notifier).cancelDrag();
+          ref.read(terminalDragProvider.notifier).cancelDrag();
         }
       },
       onDraggableCanceled: (velocity, offset) {
         print('❌ Drag canceled: ${widget.tab.name}');
-        ref.read(tabDragProvider.notifier).cancelDrag();
+        ref.read(terminalDragProvider.notifier).cancelDrag();
       },
       child: _buildTabContent(isActive, isDragging),
     );

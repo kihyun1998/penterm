@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../../feature/terminal/provider/tab_drag_provider.dart';
 import '../../../feature/terminal/provider/tab_list_provider.dart';
 import '../../../feature/terminal/provider/tab_provider.dart';
+import '../../../feature/terminal/provider/terminal_drag_provider.dart';
 import '../../util/svg/model/enum_svg_asset.dart';
 import '../app_icon_button.dart';
 import '../app_icon_tab.dart';
@@ -56,7 +56,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
     final tabList = ref.watch(tabListProvider); // 🚀 List로 변경
-    final dragState = ref.watch(tabDragProvider);
+    final dragState = ref.watch(terminalDragProvider); // 🚀 변경
 
     // 🚀 정렬 불필요! List 자체가 이미 순서대로 정렬됨
     final fixedTabs = tabList.where((tab) => !tab.isClosable).toList();
