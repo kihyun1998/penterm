@@ -26,6 +26,9 @@ class TerminalTabWidget extends ConsumerStatefulWidget {
 class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
   bool _isHovered = false;
 
+  // 🆕 고정 탭 너비
+  static const double _tabWidth = 140.0;
+
   @override
   Widget build(BuildContext context) {
     final isActive = widget.activeTabId == widget.tab.id;
@@ -74,6 +77,8 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
     return Opacity(
       opacity: isDragging ? 0.5 : 1.0, // 드래그 중일 때 투명도 적용
       child: Container(
+        // 🆕 고정 너비 적용
+        width: _tabWidth,
         margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
         child: MouseRegion(
           onEnter: (_) => setState(() => _isHovered = true),
@@ -106,7 +111,6 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     child: Row(
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // 탭 아이콘 (터미널)
                         Icon(
@@ -117,13 +121,17 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                               : ref.color.onBackgroundSoft,
                         ),
                         const SizedBox(width: 6),
-                        // 탭 이름
-                        Text(
-                          widget.tab.name,
-                          style: ref.font.semiBoldText12.copyWith(
-                            color: isActive
-                                ? ref.color.primary
-                                : ref.color.onBackgroundSoft,
+                        // 🆕 탭 이름 - Expanded로 감싸고 ellipsis 처리
+                        Expanded(
+                          child: Text(
+                            widget.tab.name,
+                            style: ref.font.semiBoldText12.copyWith(
+                              color: isActive
+                                  ? ref.color.primary
+                                  : ref.color.onBackgroundSoft,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                         ),
                         const SizedBox(width: 16), // X 버튼 공간 확보
@@ -170,6 +178,8 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
     return Material(
       color: Colors.transparent,
       child: Container(
+        // 🆕 피드백도 동일한 고정 너비
+        width: _tabWidth,
         margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 6),
         decoration: BoxDecoration(
           color:
@@ -203,7 +213,6 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
             children: [
               // 탭 아이콘 (터미널)
               Icon(
@@ -213,12 +222,17 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
                     isActive ? ref.color.primary : ref.color.onBackgroundSoft,
               ),
               const SizedBox(width: 6),
-              // 탭 이름
-              Text(
-                widget.tab.name,
-                style: ref.font.semiBoldText12.copyWith(
-                  color:
-                      isActive ? ref.color.primary : ref.color.onBackgroundSoft,
+              // 🆕 탭 이름 - 피드백에서도 ellipsis 처리
+              Expanded(
+                child: Text(
+                  widget.tab.name,
+                  style: ref.font.semiBoldText12.copyWith(
+                    color: isActive
+                        ? ref.color.primary
+                        : ref.color.onBackgroundSoft,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
             ],

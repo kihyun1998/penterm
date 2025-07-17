@@ -12,7 +12,7 @@ class TabDropZone extends ConsumerStatefulWidget {
   /// 이 드롭 영역이 대표하는 탭의 이름 (디버그용)
   final String targetTabName;
 
-  /// 드롭 영역의 크기 (탭과 동일하게)
+  /// 🆕 드롭 영역의 크기 (탭과 동일하게) - 140으로 변경
   final double width;
   final double height;
 
@@ -20,7 +20,7 @@ class TabDropZone extends ConsumerStatefulWidget {
     super.key,
     required this.targetOrder,
     required this.targetTabName,
-    this.width = 120,
+    this.width = 140.0, // 🆕 터미널 탭과 동일한 크기로 변경
     this.height = 38,
   });
 
@@ -55,8 +55,7 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
         // 마우스가 이 영역 위에 있을 때 타겟으로 설정
         if (!_isHovered) {
           setState(() => _isHovered = true);
-          print(
-              '🎯 Enter drop zone: ${widget.targetTabName} (order ${widget.targetOrder})');
+
           ref.read(tabDragProvider.notifier).updateTarget(
                 widget.targetOrder,
                 dragPosition: details.offset,
@@ -66,8 +65,6 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
       onLeave: (data) {
         // 마우스가 이 영역을 벗어날 때
         setState(() => _isHovered = false);
-        print('❌ Leave drop zone: ${widget.targetTabName}');
-        // 타겟을 null로 설정하지는 않음 (다른 영역으로 이동할 수 있음)
       },
       onAcceptWithDetails: (draggedTab) {
         // 실제 드롭이 발생했을 때 - 이제 실제 이동 수행

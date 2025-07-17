@@ -109,9 +109,7 @@ class SplitLayout extends _$SplitLayout {
 
     // 현재 활성 탭 이름 변경 (Split 표시)
     print('✏️ Updating active tab name to show split state');
-    ref
-        .read(tabListProvider.notifier)
-        .renameTab(currentActiveTabId, 'Terminal (Split)');
+    ref.read(tabListProvider.notifier).renameTab(currentActiveTabId, 'Split');
 
     // 드래그된 터미널 탭을 탭 목록에서 안전하게 제거
     print('🗑️ Safely removing dragged terminal tab: $terminalId');
