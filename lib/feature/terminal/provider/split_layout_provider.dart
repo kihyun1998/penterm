@@ -118,7 +118,7 @@ class SplitLayout extends _$SplitLayout {
     // 🆕 제거 후 탭 상태 확인
     final remainingTabs = ref.read(tabListProvider);
     print('📋 Remaining tabs after removal:');
-    for (final tab in remainingTabs.values) {
+    for (final tab in remainingTabs) {
       print('  └─ ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
     }
 

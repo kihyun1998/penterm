@@ -10,6 +10,7 @@ import '../feature/terminal/model/tab_info.dart';
 import '../feature/terminal/provider/active_tabinfo_provider.dart';
 import '../feature/terminal/provider/split_layout_provider.dart';
 import '../feature/terminal/provider/tab_drag_provider.dart';
+import '../feature/terminal/provider/tab_list_provider.dart';
 import '../feature/terminal/ui/split_drop_zone.dart';
 
 class MainScreen extends ConsumerWidget {
@@ -19,6 +20,8 @@ class MainScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final activeTabInfo = ref.watch(activeTabInfoProvider);
     final dragState = ref.watch(tabDragProvider);
+    final tabList = ref.watch(tabListProvider); // 🚀 List 기반
+
     return Scaffold(
       body: Stack(
         children: [
@@ -76,9 +79,11 @@ class MainScreen extends ConsumerWidget {
                       Color textColor = Colors.white;
                       if (line.contains('Dragging:')) {
                         textColor = ref.color.neonPurple;
-                      } else if (line.contains('Target Order:')) {
+                      } else if (line.contains('Target Index:')) {
+                        // 🚀 Target Order → Target Index
                         textColor = ref.color.neonGreen;
-                      } else if (line.contains('Place Order:')) {
+                      } else if (line.contains('Place Index:')) {
+                        // 🚀 Place Order → Place Index
                         textColor = ref.color.neonBlue;
                       } else if (line.contains('Expected:')) {
                         textColor = ref.color.neonPink;
@@ -152,6 +157,48 @@ class MainScreen extends ConsumerWidget {
                   ),
                 );
               },
+            ),
+          ),
+
+          // 🆕 탭 순서 디버그 정보
+          Positioned(
+            bottom: 10,
+            left: 10,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: ref.color.neonGreen.withOpacity(0.5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '📋 TAB ORDER DEBUG',
+                    style: ref.font.monoBoldText10.copyWith(
+                      color: ref.color.neonGreen,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...tabList.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final tab = entry.value;
+                    final isActive = activeTabInfo?.id == tab.id;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 2),
+                      child: Text(
+                        '[$index] ${tab.name} ${isActive ? '🔥' : ''}',
+                        style: ref.font.monoRegularText10.copyWith(
+                          color: isActive ? ref.color.neonGreen : Colors.white,
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
             ),
           ),
         ],

@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'tab_info.dart';
 
-/// 새로운 탭 드래그 상태를 관리하는 모델
+/// 탭 드래그 상태를 관리하는 모델 (index 기반)
 class TabDragState {
-  /// 현재 드래그 가능한 탭들 (draggable tabs만)
-  final Map<String, TabInfo> currentTabs;
+  /// 현재 드래그 가능한 탭들 (List 순서 그대로)
+  final List<TabInfo> currentTabs;
 
   /// 드래그 중인 탭 ID
   final String? draggingTabId;
 
-  /// 드롭 타겟 order (드롭될 위치의 order)
-  final int? targetOrder;
+  /// 드롭 타겟 index (드롭될 위치의 index)
+  final int? targetIndex;
 
-  /// 예상 결과 순서 (드롭했을 때의 새로운 탭들)
-  final Map<String, TabInfo> expectedResult;
+  /// 예상 결과 순서 (드롭했을 때의 새로운 탭 리스트)
+  final List<TabInfo> expectedResult;
 
   /// 드래그 중인 마우스 위치 (디버그용)
   final Offset? dragPosition;
@@ -23,18 +23,22 @@ class TabDragState {
   bool get isDragging => draggingTabId != null;
 
   /// 드래그 중인 탭 정보
-  TabInfo? get draggingTab => isDragging ? currentTabs[draggingTabId!] : null;
-
-  /// 타겟 위치의 탭 정보 (드롭될 위치의 기존 탭)
-  TabInfo? get targetTab => targetOrder != null
-      ? currentTabs.values.where((tab) => tab.order == targetOrder).firstOrNull
+  TabInfo? get draggingTab => isDragging
+      ? currentTabs.firstWhere((tab) => tab.id == draggingTabId!,
+          orElse: () => throw StateError('Dragging tab not found'))
       : null;
 
+  /// 타겟 위치의 탭 정보 (드롭될 위치의 기존 탭)
+  TabInfo? get targetTab =>
+      targetIndex != null && targetIndex! < currentTabs.length
+          ? currentTabs[targetIndex!]
+          : null;
+
   const TabDragState({
-    this.currentTabs = const {},
+    this.currentTabs = const [],
     this.draggingTabId,
-    this.targetOrder,
-    this.expectedResult = const {},
+    this.targetIndex,
+    this.expectedResult = const [],
     this.dragPosition,
   });
 
@@ -43,48 +47,53 @@ class TabDragState {
 
   /// 드래그 시작
   TabDragState startDrag({
-    required Map<String, TabInfo> tabs,
+    required List<TabInfo> tabs,
     required String draggingId,
   }) {
     return TabDragState(
       currentTabs: tabs,
       draggingTabId: draggingId,
-      targetOrder: null,
+      targetIndex: null,
       expectedResult: tabs, // 초기에는 현재 순서와 동일
       dragPosition: null,
     );
   }
 
-  /// 타겟 order 업데이트 및 예상 결과 계산
+  /// 타겟 index 업데이트 및 예상 결과 계산
   TabDragState updateTarget({
-    required int newTargetOrder,
+    required int newTargetIndex,
     Offset? newDragPosition,
   }) {
     if (!isDragging) return this;
 
+    // 유효한 index인지 확인
+    if (newTargetIndex < 0 || newTargetIndex >= currentTabs.length) {
+      return this;
+    }
+
     final newExpectedResult = _calculateExpectedResult(
       currentTabs: currentTabs,
       draggingTabId: draggingTabId!,
-      targetOrder: newTargetOrder,
+      targetIndex: newTargetIndex,
     );
 
     return TabDragState(
       currentTabs: currentTabs,
       draggingTabId: draggingTabId,
-      targetOrder: newTargetOrder,
+      targetIndex: newTargetIndex,
       expectedResult: newExpectedResult,
       dragPosition: newDragPosition ?? dragPosition,
     );
   }
 
-  /// 드래그 위치만 업데이트 (타겟 order는 유지)
+  /// 드래그 위치만 업데이트 (타겟 index는 유지)
   TabDragState updatePosition(Offset newPosition) {
     if (!isDragging) return this;
 
     return TabDragState(
       currentTabs: currentTabs,
       draggingTabId: draggingTabId,
-      targetOrder: targetOrder,
+      targetIndex: targetIndex,
       expectedResult: expectedResult,
       dragPosition: newPosition,
     );
@@ -95,101 +104,80 @@ class TabDragState {
     return const TabDragState();
   }
 
-  /// 예상 결과 계산 로직 (order 기반)
-  static Map<String, TabInfo> _calculateExpectedResult({
-    required Map<String, TabInfo> currentTabs,
+  /// 🚀 예상 결과 계산 로직 (index 기반 - 훨씬 간단!)
+  static List<TabInfo> _calculateExpectedResult({
+    required List<TabInfo> currentTabs,
     required String draggingTabId,
-    required int targetOrder,
+    required int targetIndex,
   }) {
-    final draggingTab = currentTabs[draggingTabId];
-    if (draggingTab == null) return currentTabs;
-
-    // 현재 order로 정렬된 탭 리스트
-    final sortedTabs = currentTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    // 드래그 중인 탭의 현재 order
-    final currentDraggingOrder = draggingTab.order;
+    // 드래그 중인 탭의 현재 index 찾기
+    final currentDraggingIndex =
+        currentTabs.indexWhere((tab) => tab.id == draggingTabId);
+    if (currentDraggingIndex == -1) return currentTabs;
 
     // 자기 자신에게 드롭하는 경우
-    if (currentDraggingOrder == targetOrder) {
+    if (currentDraggingIndex == targetIndex) {
       return currentTabs; // 변경 없음
     }
 
-    final result = <String, TabInfo>{};
+    // 🚀 List 이동 시뮬레이션 (매우 간단!)
+    final result = List<TabInfo>.from(currentTabs);
+    final draggingTab = result.removeAt(currentDraggingIndex);
 
-    // 모든 탭의 새로운 order 계산
-    for (final tab in sortedTabs) {
-      if (tab.id == draggingTabId) {
-        // 드래그 중인 탭은 타겟 order로 설정
-        result[tab.id] = tab.copyWith(order: targetOrder);
-      } else if (currentDraggingOrder < targetOrder) {
-        // 뒤로 이동하는 경우: 중간 탭들을 앞으로 이동
-        if (tab.order > currentDraggingOrder && tab.order <= targetOrder) {
-          result[tab.id] = tab.copyWith(order: tab.order - 1);
-        } else {
-          result[tab.id] = tab; // 변경 없음
-        }
-      } else {
-        // 앞으로 이동하는 경우: 중간 탭들을 뒤로 이동
-        if (tab.order >= targetOrder && tab.order < currentDraggingOrder) {
-          result[tab.id] = tab.copyWith(order: tab.order + 1);
-        } else {
-          result[tab.id] = tab; // 변경 없음
-        }
-      }
-    }
+    // targetIndex 조정 (앞에서 제거했을 경우)
+    final adjustedTargetIndex =
+        currentDraggingIndex < targetIndex ? targetIndex - 1 : targetIndex;
 
+    result.insert(adjustedTargetIndex, draggingTab);
     return result;
   }
+
+  /// 드래그 중인 탭의 현재 index
+  int? get draggingIndex => isDragging
+      ? currentTabs.indexWhere((tab) => tab.id == draggingTabId!)
+      : null;
 
   /// 디버그 정보를 위한 문자열 표현
   String get debugInfo {
     if (!isDragging) return 'No drag in progress';
 
-    // order 순으로 정렬해서 표시
-    final currentOrder = currentTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-    final expectedOrder = expectedResult.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    // 드래그 중인 탭의 원래 order
-    final originalOrder = draggingTab?.order;
+    // 드래그 중인 탭의 원래 index
+    final originalIndex = draggingIndex;
 
     // 타겟 탭 정보
     final targetTabInfo =
-        targetTab != null ? '${targetTab!.name}(${targetTab!.order})' : 'None';
+        targetTab != null ? '${targetTab!.name}[$targetIndex]' : 'None';
 
-    // Place Order 계산 (자기 자신인지 확인)
-    String placeOrderInfo;
-    if (targetOrder == null) {
-      placeOrderInfo = '${originalOrder ?? 'unknown'} (original position)';
-    } else if (targetOrder == originalOrder) {
-      placeOrderInfo = '$targetOrder (same as original - no change)';
+    // Place Index 계산 (자기 자신인지 확인)
+    String placeIndexInfo;
+    if (targetIndex == null) {
+      placeIndexInfo = '${originalIndex ?? 'unknown'} (original position)';
+    } else if (targetIndex == originalIndex) {
+      placeIndexInfo = '$targetIndex (same as original - no change)';
     } else {
-      placeOrderInfo = '$targetOrder (new position)';
+      placeIndexInfo = '$targetIndex (new position)';
     }
 
     return '''
-Current: [${currentOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}]
-Dragging: ${draggingTab?.name} (original order: $originalOrder)
-Target Order: ${targetOrder ?? 'null'} (${targetOrder != null ? 'Target Tab: $targetTabInfo' : 'Outside drop zones'})
-Place Order: $placeOrderInfo
-Expected: [${expectedOrder.map((tab) => '${tab.name}(${tab.order})').join(', ')}]
+Current: [${currentTabs.asMap().entries.map((e) => '${e.value.name}[${e.key}]').join(', ')}]
+Dragging: ${draggingTab?.name} (original index: $originalIndex)
+Target Index: ${targetIndex ?? 'null'} (${targetIndex != null ? 'Target Tab: $targetTabInfo' : 'Outside drop zones'})
+Place Index: $placeIndexInfo
+Expected: [${expectedResult.asMap().entries.map((e) => '${e.value.name}[${e.key}]').join(', ')}]
 ''';
   }
 
   TabDragState copyWith({
-    Map<String, TabInfo>? currentTabs,
+    List<TabInfo>? currentTabs,
     String? draggingTabId,
-    int? targetOrder,
-    Map<String, TabInfo>? expectedResult,
+    int? targetIndex,
+    List<TabInfo>? expectedResult,
     Offset? dragPosition,
   }) {
     return TabDragState(
       currentTabs: currentTabs ?? this.currentTabs,
       draggingTabId: draggingTabId ?? this.draggingTabId,
-      targetOrder: targetOrder ?? this.targetOrder,
+      targetIndex: targetIndex ?? this.targetIndex,
       expectedResult: expectedResult ?? this.expectedResult,
       dragPosition: dragPosition ?? this.dragPosition,
     );

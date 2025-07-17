@@ -55,7 +55,7 @@ class _TerminalTabWidgetState extends ConsumerState<TerminalTabWidget> {
         print('✅ Drag ended: ${widget.tab.name}');
         final dragState = ref.read(tabDragProvider);
 
-        if (dragState.targetOrder != null) {
+        if (dragState.targetIndex != null) {
           print('📋 Target found - will be handled by TabDropZone');
           // TabDropZone에서 endDrag()를 호출할 것임
         } else {

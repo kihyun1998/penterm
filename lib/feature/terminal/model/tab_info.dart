@@ -6,14 +6,13 @@ class TabInfo {
   final String id;
   final TabType type;
   final String name;
-  final int order;
   final bool isClosable;
+  // 🚀 order 필드 완전 제거 - List index가 순서를 담당
 
   const TabInfo({
     required this.id,
     required this.type,
     required this.name,
-    required this.order,
     this.isClosable = true,
   });
 
@@ -21,14 +20,12 @@ class TabInfo {
     String? id,
     TabType? type,
     String? name,
-    int? order,
     bool? isClosable,
   }) {
     return TabInfo(
       id: id ?? this.id,
       type: type ?? this.type,
       name: name ?? this.name,
-      order: order ?? this.order,
       isClosable: isClosable ?? this.isClosable,
     );
   }

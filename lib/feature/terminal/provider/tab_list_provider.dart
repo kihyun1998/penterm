@@ -9,83 +9,89 @@ part 'tab_list_provider.g.dart';
 @Riverpod(dependencies: [ActiveTab])
 class TabList extends _$TabList {
   @override
-  Map<String, TabInfo> build() {
-    return {
-      TabType.home.value: TabInfo(
+  List<TabInfo> build() {
+    // 🚀 List로 초기화 - 순서는 List index가 담당
+    return [
+      TabInfo(
         id: TabType.home.value,
         type: TabType.home,
         name: TabType.home.displayName,
         isClosable: false,
-        order: 0,
+        // order 필드 제거됨 - index 0
       ),
-      TabType.sftp.value: TabInfo(
+      TabInfo(
         id: TabType.sftp.value,
         type: TabType.sftp,
         name: TabType.sftp.displayName,
         isClosable: false,
-        order: 1,
+        // order 필드 제거됨 - index 1
       ),
-    };
+    ];
   }
 
-  /// 새 터미널 탭 추가
+  /// 🚀 새 터미널 탭 추가 - 매우 간단!
   void addTerminalTab() {
-    final currentTabs = state;
     final terminalCount =
-        currentTabs.values.where((tab) => tab.type == TabType.terminal).length;
+        state.where((tab) => tab.type == TabType.terminal).length;
 
     final newTabId = 'terminal_${DateTime.now().millisecondsSinceEpoch}';
-
-    // 마지막 order 계산
-    final maxOrder = currentTabs.values.isNotEmpty
-        ? currentTabs.values
-            .map((tab) => tab.order)
-            .reduce((a, b) => a > b ? a : b)
-        : -1;
 
     final newTab = TabInfo(
       id: newTabId,
       type: TabType.terminal,
       name: 'Terminal ${terminalCount + 1}',
       isClosable: true,
-      order: maxOrder + 1,
+      // order 필드 제거됨 - List.add()로 자동으로 마지막에 추가
     );
 
-    state = {...currentTabs, newTabId: newTab};
+    // 🚀 단순 추가!
+    state = [...state, newTab];
 
     // 새로 추가된 탭으로 이동
     ref.read(activeTabProvider.notifier).setTab(newTabId);
   }
 
-  /// 탭 제거
+  /// 🚀 탭 제거 - 자동 재정렬!
   void removeTab(String tabId) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToRemove = currentTabs[tabId];
+    final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
-    if (tabToRemove == null) return;
+    if (tabIndex == -1) {
+      print('❌ Tab not found: $tabId');
+      return;
+    }
+
+    final tabToRemove = state[tabIndex];
 
     // 고정 탭은 제거할 수 없음
-    if (!tabToRemove.isClosable) return;
+    if (!tabToRemove.isClosable) {
+      print('❌ Cannot remove fixed tab: $tabId');
+      return;
+    }
 
-    currentTabs.remove(tabId);
-    state = currentTabs;
+    // 🚀 간단한 제거 - 순서 자동 재정렬됨!
+    final newState = List<TabInfo>.from(state);
+    newState.removeAt(tabIndex);
+    state = newState;
 
     // 제거된 탭이 현재 활성 탭이었다면 Home으로 이동
     final activeTabId = ref.read(activeTabProvider);
     if (activeTabId == tabId) {
       ref.read(activeTabProvider.notifier).goToHome();
     }
+
+    print('✅ Tab removed: $tabId (index: $tabIndex)');
   }
 
   /// 🆕 안전한 탭 제거 (활성 탭 변경하지 않음)
   void removeTabSafely(String tabId) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToRemove = currentTabs[tabId];
+    final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
-    if (tabToRemove == null) {
+    if (tabIndex == -1) {
       print('❌ Tab not found for removal: $tabId');
       return;
     }
+
+    final tabToRemove = state[tabIndex];
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) {
@@ -102,133 +108,95 @@ class TabList extends _$TabList {
       return; // 분할 작업에서는 활성 탭을 제거하지 않음
     }
 
-    // 안전하게 탭만 제거 (활성 탭 변경 없음)
-    currentTabs.remove(tabId);
-    state = currentTabs;
+    // 🚀 안전하게 탭만 제거 (활성 탭 변경 없음)
+    final newState = List<TabInfo>.from(state);
+    newState.removeAt(tabIndex);
+    state = newState;
 
-    print('✅ Tab safely removed: $tabId');
+    print('✅ Tab safely removed: $tabId (index: $tabIndex)');
   }
 
   /// 탭 이름 변경
   void renameTab(String tabId, String newName) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tab = currentTabs[tabId];
+    final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
-    if (tab != null) {
-      currentTabs[tabId] = tab.copyWith(name: newName);
-      state = currentTabs;
-    }
-  }
-
-  /// 탭 순서 변경 (드래그 앤 드롭용)
-  void reorderTab(String tabId, int targetIndex) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToMove = currentTabs[tabId];
-
-    if (tabToMove == null || !tabToMove.isClosable) return;
-
-    // 고정 탭 개수 계산
-    final fixedTabCount =
-        currentTabs.values.where((tab) => !tab.isClosable).length;
-
-    // 타겟 인덱스 조정 (고정 탭 이후로만 이동 가능)
-    final adjustedTargetIndex =
-        targetIndex < fixedTabCount ? fixedTabCount : targetIndex;
-
-    // 전체 탭 리스트 (순서대로 정렬)
-    final orderedTabs = currentTabs.values.toList();
-    orderedTabs.sort((a, b) => a.order.compareTo(b.order));
-
-    // 범위 체크
-    if (adjustedTargetIndex < 0 || adjustedTargetIndex >= orderedTabs.length) {
+    if (tabIndex == -1) {
+      print('❌ Tab not found for rename: $tabId');
       return;
     }
 
-    // 새로운 order 값들 계산
-    final updatedTabs = <String, TabInfo>{};
+    final newState = List<TabInfo>.from(state);
+    newState[tabIndex] = newState[tabIndex].copyWith(name: newName);
+    state = newState;
 
-    // 기존 탭들의 order를 재정렬
-    int newOrder = 0;
-    for (int i = 0; i < orderedTabs.length; i++) {
-      final tab = orderedTabs[i];
-
-      if (tab.id == tabId) {
-        // 드래그 중인 탭은 건너뛰기 (나중에 타겟 위치에 삽입)
-        continue;
-      }
-
-      if (newOrder == adjustedTargetIndex) {
-        // 타겟 위치에 드래그 중인 탭 삽입
-        updatedTabs[tabId] = tabToMove.copyWith(order: newOrder);
-        newOrder++;
-      }
-
-      // 기존 탭 추가
-      updatedTabs[tab.id] = tab.copyWith(order: newOrder);
-      newOrder++;
-    }
-
-    // 마지막 위치에 삽입하는 경우
-    if (!updatedTabs.containsKey(tabId)) {
-      updatedTabs[tabId] = tabToMove.copyWith(order: adjustedTargetIndex);
-    }
-
-    state = updatedTabs;
+    print('✅ Tab renamed: $tabId → $newName');
   }
 
-  /// order 기반 탭 순서 변경 (새로운 드래그 앤 드롭용)
-  void reorderTabByOrder(String tabId, int fromOrder, int toOrder) {
-    final currentTabs = Map<String, TabInfo>.from(state);
-    final tabToMove = currentTabs[tabId];
-
-    if (tabToMove == null || !tabToMove.isClosable) {
-      print('❌ Cannot reorder: tab not found or not closable');
+  /// 🚀 탭 순서 변경 (드래그 앤 드롭용) - 혁신적으로 간단!
+  void reorderTab(int fromIndex, int toIndex) {
+    // 인덱스 유효성 검사
+    if (fromIndex < 0 ||
+        fromIndex >= state.length ||
+        toIndex < 0 ||
+        toIndex >= state.length) {
+      print(
+          '❌ Invalid index: fromIndex=$fromIndex, toIndex=$toIndex, length=${state.length}');
       return;
     }
 
-    print('🔧 Reordering $tabId from order $fromOrder to order $toOrder');
+    final tabToMove = state[fromIndex];
 
-    // 순서대로 정렬된 탭 리스트
-    final sortedTabs = currentTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
-
-    final updatedTabs = <String, TabInfo>{};
-
-    // 모든 탭의 새로운 order 계산
-    for (final tab in sortedTabs) {
-      if (tab.id == tabId) {
-        // 드래그 중인 탭은 타겟 order로 설정
-        updatedTabs[tab.id] = tab.copyWith(order: toOrder);
-        print('  └─ ${tab.name}: ${tab.order} → $toOrder (moved)');
-      } else if (fromOrder < toOrder) {
-        // 뒤로 이동하는 경우: 중간 탭들을 앞으로 이동
-        if (tab.order > fromOrder && tab.order <= toOrder) {
-          final newOrder = tab.order - 1;
-          updatedTabs[tab.id] = tab.copyWith(order: newOrder);
-          print('  └─ ${tab.name}: ${tab.order} → $newOrder (shifted left)');
-        } else {
-          updatedTabs[tab.id] = tab; // 변경 없음
-          print('  └─ ${tab.name}: ${tab.order} (no change)');
-        }
-      } else {
-        // 앞으로 이동하는 경우: 중간 탭들을 뒤로 이동
-        if (tab.order >= toOrder && tab.order < fromOrder) {
-          final newOrder = tab.order + 1;
-          updatedTabs[tab.id] = tab.copyWith(order: newOrder);
-          print('  └─ ${tab.name}: ${tab.order} → $newOrder (shifted right)');
-        } else {
-          updatedTabs[tab.id] = tab; // 변경 없음
-          print('  └─ ${tab.name}: ${tab.order} (no change)');
-        }
-      }
+    // 고정 탭은 이동할 수 없음
+    if (!tabToMove.isClosable) {
+      print('❌ Cannot move fixed tab: ${tabToMove.name}');
+      return;
     }
 
-    state = updatedTabs;
+    // 🚀 혁신적으로 간단한 이동!
+    final newState = List<TabInfo>.from(state);
+    final tab = newState.removeAt(fromIndex);
+    newState.insert(toIndex, tab);
+    state = newState;
 
-    // 결과 확인
-    final resultTabs = updatedTabs.values.toList()
-      ..sort((a, b) => a.order.compareTo(b.order));
     print(
-        '📋 Final order: ${resultTabs.map((tab) => '${tab.name}(${tab.order})').join(', ')}');
+        '✅ Tab reordered: ${tabToMove.name} from index $fromIndex to $toIndex');
+  }
+
+  /// 🆕 ID로 탭 찾기 (헬퍼 메서드)
+  TabInfo? findTabById(String tabId) {
+    try {
+      return state.firstWhere((tab) => tab.id == tabId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 🆕 ID로 탭 인덱스 찾기 (헬퍼 메서드)
+  int findTabIndexById(String tabId) {
+    return state.indexWhere((tab) => tab.id == tabId);
+  }
+
+  /// 🆕 특정 타입의 탭들 가져오기
+  List<TabInfo> getTabsByType(TabType type) {
+    return state.where((tab) => tab.type == type).toList();
+  }
+
+  /// 🆕 드래그 가능한 탭들만 가져오기 (closable 탭들)
+  List<TabInfo> getDraggableTabs() {
+    return state.where((tab) => tab.isClosable).toList();
+  }
+
+  /// 🆕 고정 탭들 가져오기 (HOME, SFTP)
+  List<TabInfo> getFixedTabs() {
+    return state.where((tab) => !tab.isClosable).toList();
+  }
+
+  /// 🚀 디버그: 현재 탭 순서 출력
+  void printTabOrder() {
+    print('📋 Current tab order:');
+    for (int i = 0; i < state.length; i++) {
+      final tab = state[i];
+      print('  [$i] ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
+    }
   }
 }

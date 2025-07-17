@@ -6,7 +6,7 @@ part of 'active_tabinfo_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$activeTabInfoHash() => r'ec9fe95237d09b76f2b8088cf643ddad40444d63';
+String _$activeTabInfoHash() => r'cd41528d8fc91ac98862ba5990e61669da39c817';
 
 /// See also [activeTabInfo].
 @ProviderFor(activeTabInfo)

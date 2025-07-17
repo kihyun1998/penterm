@@ -55,16 +55,12 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
   @override
   Widget build(BuildContext context) {
     final activeTabId = ref.watch(activeTabProvider);
-    final tabMap = ref.watch(tabListProvider);
+    final tabList = ref.watch(tabListProvider); // 🚀 List로 변경
     final dragState = ref.watch(tabDragProvider);
 
-    // Map에서 직접 처리 - order 순으로 정렬
-    final allTabs = tabMap.values.toList();
-    allTabs.sort((a, b) => a.order.compareTo(b.order));
-
-    // 필터링
-    final fixedTabs = allTabs.where((tab) => !tab.isClosable).toList();
-    final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
+    // 🚀 정렬 불필요! List 자체가 이미 순서대로 정렬됨
+    final fixedTabs = tabList.where((tab) => !tab.isClosable).toList();
+    final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
 
     return Container(
       height: 50,
@@ -81,7 +77,7 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Row(
               children: [
-                // 🏠 고정 탭들 (HOME, SFTP)
+                // 🏠 고정 탭들 (HOME, SFTP) - 순서 보장됨
                 ...fixedTabs.map((tab) => AppIconTab(
                       text: tab.name,
                       isActive: activeTabId == tab.id,
@@ -99,14 +95,16 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                     color: ref.color.border,
                   ),
 
-                // 🖥️ 터미널 탭들 + 드롭 영역들
+                // 🖥️ 터미널 탭들 + 드롭 영역들 - 순서 보장됨
                 if (draggableTabs.isNotEmpty)
                   Stack(
                     children: [
                       // 하위 레이어: 일반 탭들
                       Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: draggableTabs.map((tab) {
+                        children: draggableTabs.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final tab = entry.value;
                           return TerminalTabWidget(
                             tab: tab,
                             activeTabId: activeTabId,
@@ -118,9 +116,11 @@ class _AppTitleBarState extends ConsumerState<AppTitleBar> with WindowListener {
                       if (dragState.isDragging)
                         Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: draggableTabs.map((tab) {
+                          children: draggableTabs.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final tab = entry.value;
                             return TabDropZone(
-                              targetOrder: tab.order,
+                              targetIndex: index, // 🚀 order → index 변경
                               targetTabName: tab.name,
                             );
                           }).toList(),

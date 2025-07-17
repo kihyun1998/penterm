@@ -6,21 +6,21 @@ import '../../../feature/terminal/model/tab_info.dart';
 import '../../../feature/terminal/provider/tab_drag_provider.dart';
 
 class TabDropZone extends ConsumerStatefulWidget {
-  /// 이 드롭 영역이 대표하는 탭의 order
-  final int targetOrder;
+  /// 🚀 이 드롭 영역이 대표하는 탭의 index (order 대신 index 사용)
+  final int targetIndex;
 
   /// 이 드롭 영역이 대표하는 탭의 이름 (디버그용)
   final String targetTabName;
 
-  /// 🆕 드롭 영역의 크기 (탭과 동일하게) - 140으로 변경
+  /// 드롭 영역의 크기 (터미널 탭과 동일하게)
   final double width;
   final double height;
 
   const TabDropZone({
     super.key,
-    required this.targetOrder,
+    required this.targetIndex, // 🚀 targetOrder → targetIndex 변경
     required this.targetTabName,
-    this.width = 140.0, // 🆕 터미널 탭과 동일한 크기로 변경
+    this.width = 140.0,
     this.height = 38,
   });
 
@@ -43,13 +43,13 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
       );
     }
 
-    // 현재 이 영역이 타겟인지 확인
-    final isTarget = dragState.targetOrder == widget.targetOrder;
+    // 🚀 현재 이 영역이 타겟인지 확인 (index 기반)
+    final isTarget = dragState.targetIndex == widget.targetIndex;
 
     return DragTarget<TabInfo>(
       onWillAcceptWithDetails: (data) {
-        // 드래그 중인 탭이 유효한지 확인
-        return dragState.currentTabs.containsKey(data.data.id);
+        // 🚀 드래그 중인 탭이 유효한지 확인 (List 기반)
+        return dragState.currentTabs.any((tab) => tab.id == data.data.id);
       },
       onMove: (details) {
         // 마우스가 이 영역 위에 있을 때 타겟으로 설정
@@ -57,7 +57,7 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
           setState(() => _isHovered = true);
 
           ref.read(tabDragProvider.notifier).updateTarget(
-                widget.targetOrder,
+                widget.targetIndex, // 🚀 targetOrder → targetIndex
                 dragPosition: details.offset,
               );
         }
@@ -68,15 +68,18 @@ class _TabDropZoneState extends ConsumerState<TabDropZone> {
       },
       onAcceptWithDetails: (draggedTab) {
         // 실제 드롭이 발생했을 때 - 이제 실제 이동 수행
-        if (draggedTab.data.order == widget.targetOrder) {
+        final draggedTabIndex = dragState.currentTabs
+            .indexWhere((tab) => tab.id == draggedTab.data.id);
+
+        if (draggedTabIndex == widget.targetIndex) {
           print(
               '🔄 Dropped on self: ${widget.targetTabName} (return to original position)');
           print('📋 No change needed - same position');
         } else {
           print(
-              '🎯 Dropped on zone: ${widget.targetTabName} (order ${widget.targetOrder})');
+              '🎯 Dropped on zone: ${widget.targetTabName} (index ${widget.targetIndex})');
           print(
-              '📋 Moving ${draggedTab.data.name} from order ${draggedTab.data.order} to order ${widget.targetOrder}');
+              '📋 Moving ${draggedTab.data.name} from index $draggedTabIndex to index ${widget.targetIndex}');
         }
 
         // 실제 이동 수행
