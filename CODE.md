@@ -55,13 +55,17 @@ penterm/
     │   └── terminal/
     │   │   ├── model/
     │   │       ├── enum_tab_type.dart
+    │   │       ├── split_layout_state.dart
     │   │       ├── tab_drag_state.dart
     │   │       └── tab_info.dart
-    │   │   └── provider/
+    │   │   ├── provider/
     │   │       ├── active_tabinfo_provider.dart
+    │   │       ├── split_layout_provider.dart
     │   │       ├── tab_drag_provider.dart
     │   │       ├── tab_list_provider.dart
     │   │       └── tab_provider.dart
+    │   │   └── ui/
+    │   │       └── split_drop_zone.dart
     ├── page/
     │   ├── example_heme.dart
     │   └── main_page.dart
@@ -3483,6 +3487,248 @@ enum TabType {
 }
 
 ```
+## lib/feature/terminal/model/split_layout_state.dart
+```dart
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+
+/// 분할 방향
+enum SplitType {
+  none, // 분할 없음 (일반 탭)
+  horizontal, // 좌우 분할 (세로선으로 나뉨)
+  vertical; // 상하 분할 (가로선으로 나뉨)
+
+  /// 분할이 활성화되어 있는지
+  bool get isSplit => this != SplitType.none;
+
+  /// JSON 직렬화
+  String toJson() => name;
+
+  /// JSON 역직렬화
+  static SplitType fromJson(String json) {
+    return SplitType.values.firstWhere(
+      (type) => type.name == json,
+      orElse: () => SplitType.none,
+    );
+  }
+}
+
+/// 개별 패널 정보
+class PanelInfo {
+  final String id;
+  final String? terminalId; // 이 패널에 할당된 터미널 ID
+  final PanelPosition position; // 패널 위치
+  final bool isActive; // 현재 활성 패널인지
+
+  const PanelInfo({
+    required this.id,
+    this.terminalId,
+    required this.position,
+    this.isActive = false,
+  });
+
+  /// 빈 패널인지 확인
+  bool get isEmpty => terminalId == null;
+
+  /// 터미널이 할당된 패널인지 확인
+  bool get hasTerminal => terminalId != null;
+
+  PanelInfo copyWith({
+    String? id,
+    String? terminalId,
+    PanelPosition? position,
+    bool? isActive,
+  }) {
+    return PanelInfo(
+      id: id ?? this.id,
+      terminalId: terminalId ?? this.terminalId,
+      position: position ?? this.position,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  /// 터미널 할당
+  PanelInfo assignTerminal(String terminalId) {
+    return copyWith(terminalId: terminalId);
+  }
+
+  /// 터미널 해제 (빈 패널로 만들기)
+  PanelInfo clearTerminal() {
+    return copyWith(terminalId: null);
+  }
+
+  /// 활성화
+  PanelInfo activate() {
+    return copyWith(isActive: true);
+  }
+
+  /// 비활성화
+  PanelInfo deactivate() {
+    return copyWith(isActive: false);
+  }
+}
+
+/// 패널 위치
+enum PanelPosition {
+  // 좌우 분할 시
+  left, // 왼쪽 패널
+  right, // 오른쪽 패널
+
+  // 상하 분할 시
+  top, // 위쪽 패널
+  bottom; // 아래쪽 패널
+
+  /// 좌우 분할 패널인지
+  bool get isHorizontalSplit =>
+      this == PanelPosition.left || this == PanelPosition.right;
+
+  /// 상하 분할 패널인지
+  bool get isVerticalSplit =>
+      this == PanelPosition.top || this == PanelPosition.bottom;
+
+  /// 첫 번째 패널인지 (left, top)
+  bool get isFirst => this == PanelPosition.left || this == PanelPosition.top;
+
+  /// 두 번째 패널인지 (right, bottom)
+  bool get isSecond =>
+      this == PanelPosition.right || this == PanelPosition.bottom;
+
+  /// 반대 위치 반환
+  PanelPosition get opposite {
+    switch (this) {
+      case PanelPosition.left:
+        return PanelPosition.right;
+      case PanelPosition.right:
+        return PanelPosition.left;
+      case PanelPosition.top:
+        return PanelPosition.bottom;
+      case PanelPosition.bottom:
+        return PanelPosition.top;
+    }
+  }
+
+  /// SplitType에 맞는 PanelPosition 목록
+  static List<PanelPosition> forSplitType(SplitType splitType) {
+    switch (splitType) {
+      case SplitType.horizontal:
+        return [PanelPosition.left, PanelPosition.right];
+      case SplitType.vertical:
+        return [PanelPosition.top, PanelPosition.bottom];
+      case SplitType.none:
+        return [];
+    }
+  }
+}
+
+/// 분할 레이아웃 상태
+class SplitLayoutState {
+  final String activeTabId; // 현재 활성 탭 ID
+  final SplitType splitType; // 분할 방식
+  final Map<String, PanelInfo> panels; // 패널 정보 (패널 ID -> 패널 정보)
+  final String? activePanelId; // 현재 활성 패널 ID
+
+  const SplitLayoutState({
+    required this.activeTabId,
+    this.splitType = SplitType.none,
+    this.panels = const {},
+    this.activePanelId,
+  });
+
+  /// 초기 상태 (분할 없음)
+  static const SplitLayoutState initial = SplitLayoutState(
+    activeTabId: 'home',
+  );
+
+  /// 분할이 활성화되어 있는지
+  bool get isSplit => splitType.isSplit;
+
+  /// 패널 개수
+  int get panelCount => panels.length;
+
+  /// 모든 패널 목록 (위치 순서대로 정렬)
+  List<PanelInfo> get orderedPanels {
+    final panelList = panels.values.toList();
+
+    if (splitType == SplitType.horizontal) {
+      // 좌우 분할: left -> right 순서
+      panelList.sort((a, b) {
+        if (a.position == PanelPosition.left) return -1;
+        if (b.position == PanelPosition.left) return 1;
+        return 0;
+      });
+    } else if (splitType == SplitType.vertical) {
+      // 상하 분할: top -> bottom 순서
+      panelList.sort((a, b) {
+        if (a.position == PanelPosition.top) return -1;
+        if (b.position == PanelPosition.top) return 1;
+        return 0;
+      });
+    }
+
+    return panelList;
+  }
+
+  /// 특정 위치의 패널 반환
+  PanelInfo? getPanelByPosition(PanelPosition position) {
+    return panels.values
+        .where((panel) => panel.position == position)
+        .firstOrNull;
+  }
+
+  /// 특정 터미널이 할당된 패널 반환
+  PanelInfo? getPanelByTerminal(String terminalId) {
+    return panels.values
+        .where((panel) => panel.terminalId == terminalId)
+        .firstOrNull;
+  }
+
+  /// 현재 활성 패널 반환
+  PanelInfo? get activePanel {
+    return activePanelId != null ? panels[activePanelId] : null;
+  }
+
+  /// 빈 패널 목록
+  List<PanelInfo> get emptyPanels {
+    return panels.values.where((panel) => panel.isEmpty).toList();
+  }
+
+  /// 터미널이 할당된 패널 목록
+  List<PanelInfo> get occupiedPanels {
+    return panels.values.where((panel) => panel.hasTerminal).toList();
+  }
+
+  /// 첫 번째 빈 패널 반환 (터미널 자동 할당용)
+  PanelInfo? get firstEmptyPanel {
+    return emptyPanels.isNotEmpty ? emptyPanels.first : null;
+  }
+
+  SplitLayoutState copyWith({
+    String? activeTabId,
+    SplitType? splitType,
+    Map<String, PanelInfo>? panels,
+    String? activePanelId,
+  }) {
+    return SplitLayoutState(
+      activeTabId: activeTabId ?? this.activeTabId,
+      splitType: splitType ?? this.splitType,
+      panels: panels ?? this.panels,
+      activePanelId: activePanelId ?? this.activePanelId,
+    );
+  }
+
+  /// 디버그 정보
+  String get debugInfo {
+    return '''
+Active Tab: $activeTabId
+Split Type: ${splitType.name}
+Panel Count: $panelCount
+Active Panel: $activePanelId
+Panels:
+${panels.entries.map((e) => '  ${e.key}: ${e.value.position.name} (terminal: ${e.value.terminalId ?? 'empty'}) ${e.value.isActive ? '[ACTIVE]' : ''}').join('\n')}
+''';
+  }
+}
+
+```
 ## lib/feature/terminal/model/tab_drag_state.dart
 ```dart
 import 'package:flutter/material.dart';
@@ -3744,6 +3990,377 @@ TabInfo? activeTabInfo(Ref ref) {
 }
 
 ```
+## lib/feature/terminal/provider/split_layout_provider.dart
+```dart
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
+import '../model/split_layout_state.dart';
+import 'tab_list_provider.dart';
+import 'tab_provider.dart';
+
+part 'split_layout_provider.g.dart';
+
+@Riverpod(dependencies: [ActiveTab, TabList])
+class SplitLayout extends _$SplitLayout {
+  @override
+  Map<String, SplitLayoutState> build() {
+    // 탭별 분할 상태를 관리하는 Map
+    return {};
+  }
+
+  /// 현재 활성 탭의 분할 상태 반환
+  SplitLayoutState getCurrentTabSplitState() {
+    final activeTabId = ref.read(activeTabProvider);
+    return state[activeTabId] ?? SplitLayoutState(activeTabId: activeTabId);
+  }
+
+  /// 특정 탭의 분할 상태 반환
+  SplitLayoutState getTabSplitState(String tabId) {
+    return state[tabId] ?? SplitLayoutState(activeTabId: tabId);
+  }
+
+  /// 특정 탭의 분할 상태 업데이트
+  void _updateTabSplitState(String tabId, SplitLayoutState newState) {
+    state = {
+      ...state,
+      tabId: newState,
+    };
+  }
+
+  /// 현재 활성 탭의 분할 상태 업데이트
+  void _updateCurrentTabSplitState(SplitLayoutState newState) {
+    final activeTabId = ref.read(activeTabProvider);
+    _updateTabSplitState(activeTabId, newState);
+  }
+
+  /// 분할 시작
+  /// [terminalId]: 분할할 터미널 ID (드래그된 터미널)
+  /// [splitType]: 분할 방향
+  /// [targetPosition]: 드래그된 터미널이 들어갈 위치
+  void startSplit({
+    required String terminalId,
+    required SplitType splitType,
+    required PanelPosition targetPosition,
+  }) {
+    final currentState = getCurrentTabSplitState();
+
+    // 이미 분할된 상태라면 로그만 출력하고 리턴
+    if (currentState.isSplit) {
+      print('❌ Already split: ${currentState.splitType.name}');
+      return;
+    }
+
+    // 현재 활성 탭 ID (기존 터미널)
+    final currentActiveTabId = currentState.activeTabId;
+
+    print(
+        '🚀 Start split: $terminalId → ${splitType.name} (${targetPosition.name})');
+    print('  └─ Current active tab: $currentActiveTabId');
+
+    // 새로운 패널들 생성
+    final positions = PanelPosition.forSplitType(splitType);
+    final panels = <String, PanelInfo>{};
+
+    for (int i = 0; i < positions.length; i++) {
+      final position = positions[i];
+      final panelId = '${currentState.activeTabId}_panel_${position.name}';
+
+      final isTargetPanel = position == targetPosition;
+      final isOppositePanel = position == targetPosition.opposite;
+
+      // 타겟 위치: 드래그된 터미널, 반대 위치: 기존 활성 터미널
+      String? assignedTerminalId;
+      bool isActive = false;
+
+      if (isTargetPanel) {
+        assignedTerminalId = terminalId;
+        isActive = true; // 드래그된 터미널이 활성
+      } else if (isOppositePanel) {
+        assignedTerminalId = currentActiveTabId; // 기존 터미널을 반대편에 배치
+        isActive = false;
+      }
+
+      panels[panelId] = PanelInfo(
+        id: panelId,
+        terminalId: assignedTerminalId,
+        position: position,
+        isActive: isActive,
+      );
+
+      print(
+          '  └─ Panel created: $panelId (${position.name}) - ${assignedTerminalId ?? 'empty'}${isActive ? ' [ACTIVE]' : ''}');
+    }
+
+    // 새로운 분할 상태 생성
+    final newState = currentState.copyWith(
+      splitType: splitType,
+      panels: panels,
+      activePanelId: panels.values.firstWhere((panel) => panel.isActive).id,
+    );
+
+    _updateCurrentTabSplitState(newState);
+
+    // 현재 활성 탭 이름 변경 (Split 표시)
+    print('✏️ Updating active tab name to show split state');
+    ref
+        .read(tabListProvider.notifier)
+        .renameTab(currentActiveTabId, 'Terminal (Split)');
+
+    // 드래그된 터미널 탭을 탭 목록에서 안전하게 제거
+    print('🗑️ Safely removing dragged terminal tab: $terminalId');
+    ref.read(tabListProvider.notifier).removeTabSafely(terminalId);
+
+    // 🆕 제거 후 탭 상태 확인
+    final remainingTabs = ref.read(tabListProvider);
+    print('📋 Remaining tabs after removal:');
+    for (final tab in remainingTabs.values) {
+      print('  └─ ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
+    }
+
+    print('✅ Split created successfully');
+    print(newState.debugInfo);
+  }
+
+  /// 분할 해제 (모든 패널을 제거하고 일반 탭으로 되돌림)
+  /// [terminalId]: 분할 해제 후 남겨둘 터미널 ID (null이면 모든 터미널 제거)
+  void clearSplit({String? terminalId}) {
+    final currentState = getCurrentTabSplitState();
+
+    if (!currentState.isSplit) {
+      print('❌ No split to clear');
+      return;
+    }
+
+    print('🔄 Clear split for tab: ${currentState.activeTabId}');
+
+    // 분할된 패널들의 터미널 ID 수집
+    final terminalIds = currentState.panels.values
+        .where((panel) => panel.hasTerminal)
+        .map((panel) => panel.terminalId!)
+        .toList();
+
+    print('  └─ Found terminals in split: $terminalIds');
+
+    // 현재 활성 탭 이름 복원
+    print('✏️ Restoring active tab name');
+    ref
+        .read(tabListProvider.notifier)
+        .renameTab(currentState.activeTabId, 'Terminal');
+
+    // 분할 해제 시 다른 터미널들을 새 탭으로 추가
+    final tabListNotifier = ref.read(tabListProvider.notifier);
+    for (int i = 0; i < terminalIds.length; i++) {
+      final currentTerminalId = terminalIds[i];
+      if (currentTerminalId != currentState.activeTabId) {
+        // 현재 활성 탭이 아닌 터미널들만 다시 추가
+        print('  └─ Recreating tab for terminal: $currentTerminalId');
+        tabListNotifier.addTerminalTab(); // 새 탭 생성 (임시)
+        // TODO: 실제로는 원래 터미널 정보로 복원해야 함
+      }
+    }
+
+    if (terminalId != null) {
+      print('  └─ Keeping terminal: $terminalId');
+    }
+
+    // 분할 해제된 새로운 상태
+    final newState = SplitLayoutState(
+      activeTabId: currentState.activeTabId,
+      splitType: SplitType.none,
+      panels: {},
+      activePanelId: null,
+    );
+
+    _updateCurrentTabSplitState(newState);
+    print('✅ Split cleared successfully');
+  }
+
+  /// 터미널을 특정 패널로 이동
+  /// [terminalId]: 이동할 터미널 ID
+  /// [targetPanelId]: 대상 패널 ID
+  void moveTerminalToPanel({
+    required String terminalId,
+    required String targetPanelId,
+  }) {
+    final currentState = getCurrentTabSplitState();
+
+    if (!currentState.isSplit) {
+      print('❌ Cannot move terminal: not split');
+      return;
+    }
+
+    final targetPanel = currentState.panels[targetPanelId];
+    if (targetPanel == null) {
+      print('❌ Target panel not found: $targetPanelId');
+      return;
+    }
+
+    print('🔄 Move terminal: $terminalId → ${targetPanel.position.name}');
+
+    final updatedPanels = <String, PanelInfo>{};
+
+    for (final entry in currentState.panels.entries) {
+      final panelId = entry.key;
+      final panel = entry.value;
+
+      if (panel.terminalId == terminalId) {
+        // 기존 터미널이 있던 패널에서 제거
+        updatedPanels[panelId] = panel.clearTerminal().deactivate();
+        print('  └─ Removed from: ${panel.position.name}');
+      } else if (panelId == targetPanelId) {
+        // 대상 패널에 터미널 할당
+        updatedPanels[panelId] = panel.assignTerminal(terminalId).activate();
+        print('  └─ Added to: ${panel.position.name}');
+      } else {
+        // 다른 패널들은 그대로 유지 (비활성화)
+        updatedPanels[panelId] = panel.deactivate();
+      }
+    }
+
+    final newState = currentState.copyWith(
+      panels: updatedPanels,
+      activePanelId: targetPanelId,
+    );
+
+    _updateCurrentTabSplitState(newState);
+    print('✅ Terminal moved successfully');
+  }
+
+  /// 활성 패널 변경
+  /// [panelId]: 활성화할 패널 ID
+  void setActivePanel(String panelId) {
+    final currentState = getCurrentTabSplitState();
+
+    if (!currentState.isSplit) {
+      print('❌ Cannot set active panel: not split');
+      return;
+    }
+
+    final targetPanel = currentState.panels[panelId];
+    if (targetPanel == null) {
+      print('❌ Panel not found: $panelId');
+      return;
+    }
+
+    print('🎯 Set active panel: ${targetPanel.position.name}');
+
+    // 모든 패널을 비활성화하고 타겟 패널만 활성화
+    final updatedPanels = <String, PanelInfo>{};
+    for (final entry in currentState.panels.entries) {
+      final currentPanelId = entry.key;
+      final panel = entry.value;
+
+      updatedPanels[currentPanelId] =
+          currentPanelId == panelId ? panel.activate() : panel.deactivate();
+    }
+
+    final newState = currentState.copyWith(
+      panels: updatedPanels,
+      activePanelId: panelId,
+    );
+
+    _updateCurrentTabSplitState(newState);
+  }
+
+  /// 분할 방향 변경
+  /// [newSplitType]: 새로운 분할 방향
+  /// 기존 터미널들의 위치는 첫 번째, 두 번째 순서로 재배치
+  void changeSplitType(SplitType newSplitType) {
+    final currentState = getCurrentTabSplitState();
+
+    if (!currentState.isSplit) {
+      print('❌ Cannot change split type: not split');
+      return;
+    }
+
+    if (currentState.splitType == newSplitType) {
+      print('❌ Same split type: ${newSplitType.name}');
+      return;
+    }
+
+    print(
+        '🔄 Change split type: ${currentState.splitType.name} → ${newSplitType.name}');
+
+    // 기존 패널들을 순서대로 정렬
+    final orderedPanels = currentState.orderedPanels;
+    final newPositions = PanelPosition.forSplitType(newSplitType);
+
+    final newPanels = <String, PanelInfo>{};
+    String? newActivePanelId;
+
+    for (int i = 0; i < newPositions.length && i < orderedPanels.length; i++) {
+      final oldPanel = orderedPanels[i];
+      final newPosition = newPositions[i];
+      final newPanelId =
+          '${currentState.activeTabId}_panel_${newPosition.name}';
+
+      final newPanel = PanelInfo(
+        id: newPanelId,
+        terminalId: oldPanel.terminalId,
+        position: newPosition,
+        isActive: oldPanel.isActive,
+      );
+
+      newPanels[newPanelId] = newPanel;
+
+      if (newPanel.isActive) {
+        newActivePanelId = newPanelId;
+      }
+
+      print(
+          '  └─ ${oldPanel.position.name} → ${newPosition.name} (${oldPanel.terminalId ?? 'empty'})');
+    }
+
+    final newState = currentState.copyWith(
+      splitType: newSplitType,
+      panels: newPanels,
+      activePanelId: newActivePanelId,
+    );
+
+    _updateCurrentTabSplitState(newState);
+    print('✅ Split type changed successfully');
+    print(newState.debugInfo);
+  }
+
+  /// 특정 탭의 분할 상태 제거 (탭이 삭제될 때 호출)
+  void removeTabSplit(String tabId) {
+    if (state.containsKey(tabId)) {
+      final newState = Map<String, SplitLayoutState>.from(state);
+      newState.remove(tabId);
+      state = newState;
+      print('🗑️ Removed split state for tab: $tabId');
+    }
+  }
+
+  /// 디버그: 현재 상태 출력
+  void printCurrentState() {
+    final currentState = getCurrentTabSplitState();
+    print('🐛 Current Split State:');
+    print(currentState.debugInfo);
+  }
+}
+
+/// 현재 활성 탭의 분할 상태를 반환하는 편의 Provider
+@Riverpod(dependencies: [SplitLayout, ActiveTab])
+SplitLayoutState currentTabSplitState(Ref ref) {
+  final splitLayoutState = ref.watch(splitLayoutProvider);
+  final activeTabId = ref.watch(activeTabProvider);
+  final splitLayoutNotifier = ref.read(splitLayoutProvider.notifier);
+
+  // 현재 탭의 분할 상태 가져오기
+  final currentState = splitLayoutNotifier.getCurrentTabSplitState();
+
+  // 디버그 로그
+  print('🔄 currentTabSplitState updated: $activeTabId');
+  print('  └─ isSplit: ${currentState.isSplit}');
+  print('  └─ splitType: ${currentState.splitType.name}');
+  print('  └─ panelCount: ${currentState.panelCount}');
+
+  return currentState;
+}
+
+```
 ## lib/feature/terminal/provider/tab_drag_provider.dart
 ```dart
 import 'package:flutter/material.dart';
@@ -3965,6 +4582,38 @@ class TabList extends _$TabList {
     }
   }
 
+  /// 🆕 안전한 탭 제거 (활성 탭 변경하지 않음)
+  void removeTabSafely(String tabId) {
+    final currentTabs = Map<String, TabInfo>.from(state);
+    final tabToRemove = currentTabs[tabId];
+
+    if (tabToRemove == null) {
+      print('❌ Tab not found for removal: $tabId');
+      return;
+    }
+
+    // 고정 탭은 제거할 수 없음
+    if (!tabToRemove.isClosable) {
+      print('❌ Cannot remove fixed tab: $tabId');
+      return;
+    }
+
+    // 현재 활성 탭 확인
+    final activeTabId = ref.read(activeTabProvider);
+
+    if (activeTabId == tabId) {
+      print(
+          '⚠️ Warning: Trying to remove active tab. This should not happen in split operation.');
+      return; // 분할 작업에서는 활성 탭을 제거하지 않음
+    }
+
+    // 안전하게 탭만 제거 (활성 탭 변경 없음)
+    currentTabs.remove(tabId);
+    state = currentTabs;
+
+    print('✅ Tab safely removed: $tabId');
+  }
+
   /// 탭 이름 변경
   void renameTab(String tabId, String newName) {
     final currentTabs = Map<String, TabInfo>.from(state);
@@ -4119,6 +4768,313 @@ class ActiveTab extends _$ActiveTab {
   void goToSftp() {
     state = TabType.sftp.value;
   }
+}
+
+```
+## lib/feature/terminal/ui/split_drop_zone.dart
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:penterm/core/theme/provider/theme_provider.dart';
+
+import '../model/split_layout_state.dart';
+import '../model/tab_info.dart';
+import '../provider/split_layout_provider.dart';
+import '../provider/tab_provider.dart';
+
+enum SplitDirection {
+  // 큰 분할 (4개)
+  top,
+  bottom,
+  left,
+  right,
+
+  // 작은 분할 (4개) - 중앙 영역의 모서리
+  topSmall,
+  bottomSmall,
+  leftSmall,
+  rightSmall,
+
+  // 중앙 분할 (2개) - 중앙의 중앙
+  topCenter,
+  bottomCenter,
+}
+
+class SplitDropZone extends ConsumerStatefulWidget {
+  /// 분할 방향
+  final SplitDirection direction;
+
+  /// 현재 활성 터미널 탭 정보
+  final TabInfo currentTab;
+
+  /// hover 상태 변경 콜백
+  final Function(SplitDirection? direction) onHoverChanged;
+
+  const SplitDropZone({
+    super.key,
+    required this.direction,
+    required this.currentTab,
+    required this.onHoverChanged,
+  });
+
+  @override
+  ConsumerState<SplitDropZone> createState() => _SplitDropZoneState();
+}
+
+class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    // 🆕 현재 활성 탭 ID 가져오기
+    final currentActiveTabId = ref.watch(activeTabProvider);
+
+    return DragTarget<TabInfo>(
+      onWillAcceptWithDetails: (data) {
+        // 터미널 탭만 허용하고, 자기 자신(현재 활성 탭)은 제외
+        final isTerminalTab = data.data.type.value == 'terminal';
+        final isNotSelf = data.data.id != currentActiveTabId;
+
+        print(
+            '🔍 Will accept? Terminal: $isTerminalTab, NotSelf: $isNotSelf (${data.data.id} != $currentActiveTabId)');
+
+        return isTerminalTab && isNotSelf;
+      },
+      onMove: (details) {
+        // 🆕 허용되지 않는 드래그라면 hover 이벤트도 차단
+        final currentActiveTabId = ref.read(activeTabProvider);
+        final isTerminalTab = details.data.type.value == 'terminal';
+        final isNotSelf = details.data.id != currentActiveTabId;
+
+        if (!isTerminalTab || !isNotSelf) {
+          print(
+              '🚫 Hover blocked: Terminal: $isTerminalTab, NotSelf: $isNotSelf');
+          return; // hover 이벤트 차단
+        }
+
+        if (!_isHovered) {
+          setState(() => _isHovered = true);
+          widget.onHoverChanged(widget.direction); // 상위에 hover 상태 알림
+          _logSplitDetection();
+        }
+      },
+      onLeave: (data) {
+        if (_isHovered) {
+          setState(() => _isHovered = false);
+          widget.onHoverChanged(null); // hover 해제 알림
+        }
+      },
+      onAcceptWithDetails: (draggedTab) {
+        // 🆕 실제 분할 실행
+        _executeSplit(draggedTab.data);
+
+        setState(() => _isHovered = false);
+        widget.onHoverChanged(null); // hover 해제
+      },
+      builder: (context, candidateData, rejectedData) {
+        return Container(
+          decoration: BoxDecoration(
+            color: _isHovered
+                ? _getDirectionColor().withOpacity(0.1)
+                : Colors.transparent,
+            border: _isHovered
+                ? Border.all(
+                    color: _getDirectionColor(),
+                    width: 1,
+                  )
+                : Border.all(
+                    color: Colors.white.withOpacity(0.1), // 영역 구분용 경계선
+                    width: 0.5,
+                  ),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: _isHovered
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _getDirectionIcon(),
+                        size: 16,
+                        color: _getDirectionColor(),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _getDirectionText(),
+                        style: ref.font.regularText10.copyWith(
+                          color: _getDirectionColor(),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : Center(
+                  child: Text(
+                    _getDirectionText(),
+                    style: ref.font.regularText10.copyWith(
+                      color: Colors.white.withOpacity(0.3),
+                    ),
+                  ),
+                ),
+        );
+      },
+    );
+  }
+
+  /// 🆕 실제 분할 실행
+  void _executeSplit(TabInfo draggedTab) {
+    print('🎯 Execute split: ${draggedTab.name} → ${widget.direction.name}');
+
+    // SplitDirection을 SplitType과 PanelPosition으로 변환
+    final splitInfo = _convertToSplitInfo(widget.direction);
+
+    print('  └─ SplitType: ${splitInfo.splitType.name}');
+    print('  └─ TargetPosition: ${splitInfo.targetPosition.name}');
+
+    // SplitLayoutProvider를 통해 실제 분할 실행
+    ref.read(splitLayoutProvider.notifier).startSplit(
+          terminalId: draggedTab.id,
+          splitType: splitInfo.splitType,
+          targetPosition: splitInfo.targetPosition,
+        );
+
+    print('✅ Split executed successfully');
+  }
+
+  /// 🆕 SplitDirection을 SplitType과 PanelPosition으로 변환
+  _SplitInfo _convertToSplitInfo(SplitDirection direction) {
+    switch (direction) {
+      // 좌측 배치 -> 좌우 분할, 왼쪽 위치
+      case SplitDirection.left:
+      case SplitDirection.leftSmall:
+        return const _SplitInfo(
+          splitType: SplitType.horizontal,
+          targetPosition: PanelPosition.left,
+        );
+
+      // 우측 배치 -> 좌우 분할, 오른쪽 위치
+      case SplitDirection.right:
+      case SplitDirection.rightSmall:
+        return const _SplitInfo(
+          splitType: SplitType.horizontal,
+          targetPosition: PanelPosition.right,
+        );
+
+      // 상단 배치 -> 상하 분할, 위쪽 위치
+      case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
+        return const _SplitInfo(
+          splitType: SplitType.vertical,
+          targetPosition: PanelPosition.top,
+        );
+
+      // 하단 배치 -> 상하 분할, 아래쪽 위치
+      case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
+        return const _SplitInfo(
+          splitType: SplitType.vertical,
+          targetPosition: PanelPosition.bottom,
+        );
+    }
+  }
+
+  /// 방향별 색상
+  Color _getDirectionColor() {
+    switch (widget.direction) {
+      case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
+        return Colors.green;
+      case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
+        return Colors.blue;
+      case SplitDirection.left:
+      case SplitDirection.leftSmall:
+        return Colors.red;
+      case SplitDirection.right:
+      case SplitDirection.rightSmall:
+        return Colors.orange;
+    }
+  }
+
+  /// 방향별 아이콘
+  IconData _getDirectionIcon() {
+    switch (widget.direction) {
+      case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
+        return Icons.vertical_align_top;
+      case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
+        return Icons.vertical_align_bottom;
+      case SplitDirection.left:
+      case SplitDirection.leftSmall:
+        return Icons.align_horizontal_left;
+      case SplitDirection.right:
+      case SplitDirection.rightSmall:
+        return Icons.align_horizontal_right;
+    }
+  }
+
+  /// 방향별 텍스트
+  String _getDirectionText() {
+    switch (widget.direction) {
+      case SplitDirection.top:
+        return 'Top';
+      case SplitDirection.bottom:
+        return 'Bottom';
+      case SplitDirection.left:
+        return 'Left';
+      case SplitDirection.right:
+        return 'Right';
+      case SplitDirection.topSmall:
+        return 'Top-S';
+      case SplitDirection.bottomSmall:
+        return 'Bot-S';
+      case SplitDirection.leftSmall:
+        return 'Left-S';
+      case SplitDirection.rightSmall:
+        return 'Right-S';
+      case SplitDirection.topCenter:
+        return 'Top-C';
+      case SplitDirection.bottomCenter:
+        return 'Bot-C';
+    }
+  }
+
+  /// 콘솔 로그 출력
+  void _logSplitDetection() {
+    final emoji = {
+      SplitDirection.top: '🟢',
+      SplitDirection.topSmall: '🟢',
+      SplitDirection.topCenter: '🟢',
+      SplitDirection.bottom: '🔵',
+      SplitDirection.bottomSmall: '🔵',
+      SplitDirection.bottomCenter: '🔵',
+      SplitDirection.left: '🔴',
+      SplitDirection.leftSmall: '🔴',
+      SplitDirection.right: '🟡',
+      SplitDirection.rightSmall: '🟡',
+    }[widget.direction];
+
+    print(
+        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.name}');
+  }
+}
+
+/// 🆕 SplitDirection 변환 정보를 담는 헬퍼 클래스
+class _SplitInfo {
+  final SplitType splitType;
+  final PanelPosition targetPosition;
+
+  const _SplitInfo({
+    required this.splitType,
+    required this.targetPosition,
+  });
 }
 
 ```
@@ -4392,9 +5348,13 @@ import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 import '../core/ui/title_bar/app_title_bar.dart';
 import '../feature/terminal/model/enum_tab_type.dart';
+import '../feature/terminal/model/split_layout_state.dart';
+import '../feature/terminal/model/tab_drag_state.dart';
 import '../feature/terminal/model/tab_info.dart';
 import '../feature/terminal/provider/active_tabinfo_provider.dart';
+import '../feature/terminal/provider/split_layout_provider.dart';
 import '../feature/terminal/provider/tab_drag_provider.dart';
+import '../feature/terminal/ui/split_drop_zone.dart';
 
 class MainScreen extends ConsumerWidget {
   const MainScreen({super.key});
@@ -4421,7 +5381,9 @@ class MainScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          ), // 🎯 드래그 상태 디버그 정보
+          ),
+
+          // 🎯 드래그 상태 디버그 정보
           if (dragState.isDragging)
             Positioned(
               top: 60, // 타이틀바 아래쪽에 배치
@@ -4480,6 +5442,62 @@ class MainScreen extends ConsumerWidget {
                 ),
               ),
             ),
+
+          // 🆕 분할 상태 디버그 정보
+          Positioned(
+            top: 60,
+            right: 10,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final splitState = ref.watch(currentTabSplitStateProvider);
+
+                if (!splitState.isSplit) return const SizedBox.shrink();
+
+                return Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(4),
+                    border:
+                        Border.all(color: ref.color.secondary.withOpacity(0.5)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '🔄 SPLIT DEBUG',
+                        style: ref.font.monoBoldText10.copyWith(
+                          color: ref.color.secondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...splitState.debugInfo.split('\n').map((line) {
+                        if (line.trim().isEmpty) return const SizedBox.shrink();
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            line,
+                            style: ref.font.monoRegularText10.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -4540,10 +5558,184 @@ class MainScreen extends ConsumerWidget {
         );
 
       case TabType.terminal:
-        return Container(
-          key: ValueKey(tabInfo.id),
+        return _buildTerminalContent(tabInfo, ref);
+    }
+  }
+
+  Widget _buildTerminalContent(TabInfo tabInfo, WidgetRef ref) {
+    final dragState = ref.watch(tabDragProvider);
+    final splitState = ref.watch(currentTabSplitStateProvider);
+
+    // 🆕 분할 상태에 따른 렌더링
+    if (splitState.isSplit) {
+      return _buildSplitTerminalContent(tabInfo, splitState, ref);
+    } else {
+      return _buildSingleTerminalContent(tabInfo, dragState, ref);
+    }
+  }
+
+  /// 🆕 분할된 터미널 컨텐츠
+  Widget _buildSplitTerminalContent(
+      TabInfo tabInfo, SplitLayoutState splitState, WidgetRef ref) {
+    final orderedPanels = splitState.orderedPanels;
+
+    return SizedBox(
+      key: ValueKey('${tabInfo.id}_split_${splitState.splitType.name}'),
+      width: double.infinity,
+      height: double.infinity,
+      child: splitState.splitType == SplitType.horizontal
+          ? Row(
+              children: orderedPanels
+                  .map((panel) => _buildPanel(panel, ref))
+                  .toList())
+          : Column(
+              children: orderedPanels
+                  .map((panel) => _buildPanel(panel, ref))
+                  .toList()),
+    );
+  }
+
+  /// 🆕 개별 패널 위젯
+  Widget _buildPanel(PanelInfo panel, WidgetRef ref) {
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: panel.isActive ? ref.color.primary : ref.color.border,
+            width: panel.isActive ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(4),
+        child: panel.hasTerminal
+            ? _buildTerminalPanel(panel, ref)
+            : _buildEmptyPanel(panel, ref),
+      ),
+    );
+  }
+
+  /// 🆕 터미널이 있는 패널
+  Widget _buildTerminalPanel(PanelInfo panel, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: ref.theme.color.secondaryVariant,
+      child: Stack(
+        children: [
+          // 🆕 패널 상단 드래그 핸들 (3단계에서 구현)
+          // TODO: 3단계에서 패널 드래그 핸들 추가
+
+          // 터미널 컨텐츠
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.terminal,
+                  size: 48,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Terminal: ${panel.terminalId}',
+                  style: ref.font.semiBoldText18.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Panel: ${panel.position.name}',
+                  style: ref.font.regularText14.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
+                if (panel.isActive)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: ref.color.primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: ref.color.primary, width: 1),
+                    ),
+                    child: Text(
+                      'ACTIVE',
+                      style: ref.font.semiBoldText12.copyWith(
+                        color: ref.color.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🆕 빈 패널
+  Widget _buildEmptyPanel(PanelInfo panel, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: ref.theme.color.surface,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_box_outlined,
+              size: 48,
+              color: Colors.white.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Empty Panel',
+              style: ref.font.semiBoldText18.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Position: ${panel.position.name}',
+              style: ref.font.regularText14.copyWith(
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Drag a terminal here',
+              style: ref.font.regularText12.copyWith(
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 단일 터미널 컨텐츠 (기존 로직)
+  Widget _buildSingleTerminalContent(
+      TabInfo tabInfo, TabDragState dragState, WidgetRef ref) {
+    // 🆕 현재 탭의 분할 상태 확인
+    final splitState = ref.watch(currentTabSplitStateProvider);
+
+    // 터미널 탭이 드래그 중인지 확인
+    final isTerminalDragging =
+        dragState.isDragging && dragState.draggingTab?.type.value == 'terminal';
+
+    // 🆕 이미 분할된 상태라면 드롭존 숨기기
+    final shouldShowDropZones = isTerminalDragging && !splitState.isSplit;
+
+    return Stack(
+      key: ValueKey('${tabInfo.id}_single'),
+      children: [
+        // 기본 터미널 컨텐츠
+        Container(
           width: double.infinity,
-          color: Colors.green,
+          color: ref.theme.color.secondaryVariant,
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -4567,11 +5759,33 @@ class MainScreen extends ConsumerWidget {
                     color: Colors.white70,
                   ),
                 ),
+                // 🆕 분할 상태 표시
+                if (splitState.isSplit)
+                  Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange, width: 1),
+                    ),
+                    child: Text(
+                      'Already Split (${splitState.splitType.name})',
+                      style: ref.font.semiBoldText14.copyWith(
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
-        );
-    }
+        ),
+
+        // 🆕 분할되지 않은 상태에서만 드롭존 표시
+        if (shouldShowDropZones) _TerminalSplitHandler(tabInfo: tabInfo),
+      ],
+    );
   }
 
   Widget _buildDefaultContent(WidgetRef ref) {
@@ -4588,6 +5802,338 @@ class MainScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+/// 터미널 분할 처리 위젯 (드롭존 + 전체 화면 미리보기)
+class _TerminalSplitHandler extends ConsumerStatefulWidget {
+  final TabInfo tabInfo;
+
+  const _TerminalSplitHandler({required this.tabInfo});
+
+  @override
+  ConsumerState<_TerminalSplitHandler> createState() =>
+      _TerminalSplitHandlerState();
+}
+
+class _TerminalSplitHandlerState extends ConsumerState<_TerminalSplitHandler> {
+  SplitDirection? _hoveredDirection;
+
+  /// hover 상태 변경 처리
+  void _onHoverChanged(SplitDirection? direction) {
+    if (_hoveredDirection != direction) {
+      setState(() {
+        _hoveredDirection = direction;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        // 10개 드롭존 배치
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final height = constraints.maxHeight;
+
+            return Stack(
+              children: [
+                // ============ 큰 분할 (4개) ============
+
+                // 🔴 Left - 왼쪽 1/3 전체 높이
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  width: width / 3,
+                  height: height,
+                  child: SplitDropZone(
+                    direction: SplitDirection.left,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🟡 Right - 오른쪽 1/3 전체 높이
+                Positioned(
+                  left: width * 2 / 3,
+                  top: 0,
+                  width: width / 3,
+                  height: height,
+                  child: SplitDropZone(
+                    direction: SplitDirection.right,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🟢 Top - 상단 1/3, 중앙 1/3 너비
+                Positioned(
+                  left: width / 3,
+                  top: 0,
+                  width: width / 3,
+                  height: height / 3,
+                  child: SplitDropZone(
+                    direction: SplitDirection.top,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🔵 Bottom - 하단 1/3, 중앙 1/3 너비
+                Positioned(
+                  left: width / 3,
+                  top: height * 2 / 3,
+                  width: width / 3,
+                  height: height / 3,
+                  child: SplitDropZone(
+                    direction: SplitDirection.bottom,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // ============ 작은 분할 (4개) - 중앙 영역의 모서리 ============
+
+                // 🔴 Left-Small - 중앙 영역의 왼쪽 1/3
+                Positioned(
+                  left: width / 3,
+                  top: height / 3,
+                  width: width / 9,
+                  height: height / 3,
+                  child: SplitDropZone(
+                    direction: SplitDirection.leftSmall,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🟡 Right-Small - 중앙 영역의 오른쪽 1/3
+                Positioned(
+                  left: width * 5 / 9,
+                  top: height / 3,
+                  width: width / 9,
+                  height: height / 3,
+                  child: SplitDropZone(
+                    direction: SplitDirection.rightSmall,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🟢 Top-Small - 중앙 영역의 상단 1/3
+                Positioned(
+                  left: width * 4 / 9,
+                  top: height / 3,
+                  width: width / 9,
+                  height: height / 9,
+                  child: SplitDropZone(
+                    direction: SplitDirection.topSmall,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🔵 Bottom-Small - 중앙 영역의 하단 1/3
+                Positioned(
+                  left: width * 4 / 9,
+                  top: height * 5 / 9,
+                  width: width / 9,
+                  height: height / 9,
+                  child: SplitDropZone(
+                    direction: SplitDirection.bottomSmall,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // ============ 중앙 분할 (2개) - 중앙의 중앙 ============
+
+                // 🟢 Top-Center - 중앙의 상 50%
+                Positioned(
+                  left: width * 4 / 9,
+                  top: height * 4 / 9,
+                  width: width / 9,
+                  height: height / 18,
+                  child: SplitDropZone(
+                    direction: SplitDirection.topCenter,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+
+                // 🔵 Bottom-Center - 중앙의 하 50%
+                Positioned(
+                  left: width * 4 / 9,
+                  top: height * 4 / 9 + height / 18,
+                  width: width / 9,
+                  height: height / 18,
+                  child: SplitDropZone(
+                    direction: SplitDirection.bottomCenter,
+                    currentTab: widget.tabInfo,
+                    onHoverChanged: _onHoverChanged,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+
+        // 전체 화면 분할 미리보기 오버레이 (마우스 이벤트 무시)
+        if (_hoveredDirection != null)
+          IgnorePointer(
+            child: _buildFullScreenPreview(_hoveredDirection!),
+          ),
+      ],
+    );
+  }
+
+  /// 전체 화면 분할 미리보기
+  Widget _buildFullScreenPreview(SplitDirection direction) {
+    final dragState = ref.watch(tabDragProvider);
+    final draggingTab = dragState.draggingTab;
+
+    if (draggingTab == null) return const SizedBox.shrink();
+
+    // 방향에 따라 새로운 터미널이 들어올 영역에만 오버레이 표시
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+
+        return Stack(
+          children: [
+            // 방향별로 해당 영역에만 오버레이 표시
+            _buildDirectionOverlay(direction, width, height, draggingTab),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 방향별 오버레이 생성
+  Widget _buildDirectionOverlay(SplitDirection direction, double width,
+      double height, TabInfo draggingTab) {
+    switch (direction) {
+      case SplitDirection.left:
+      case SplitDirection.leftSmall:
+        // 왼쪽 50%에만 오버레이
+        return Positioned(
+          left: 0,
+          top: 0,
+          width: width * 0.5,
+          height: height,
+          child: _buildNewTerminalOverlay(draggingTab, direction),
+        );
+
+      case SplitDirection.right:
+      case SplitDirection.rightSmall:
+        // 오른쪽 50%에만 오버레이
+        return Positioned(
+          right: 0,
+          top: 0,
+          width: width * 0.5,
+          height: height,
+          child: _buildNewTerminalOverlay(draggingTab, direction),
+        );
+
+      case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
+        // 위쪽 50%에만 오버레이
+        return Positioned(
+          left: 0,
+          top: 0,
+          width: width,
+          height: height * 0.5,
+          child: _buildNewTerminalOverlay(draggingTab, direction),
+        );
+
+      case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
+        // 아래쪽 50%에만 오버레이
+        return Positioned(
+          left: 0,
+          bottom: 0,
+          width: width,
+          height: height * 0.5,
+          child: _buildNewTerminalOverlay(draggingTab, direction),
+        );
+    }
+  }
+
+  /// 새로운 터미널 영역 오버레이
+  Widget _buildNewTerminalOverlay(
+      TabInfo draggingTab, SplitDirection direction) {
+    return Container(
+      decoration: BoxDecoration(
+        color: ref.theme.color.surface.withOpacity(0.9), // 어두운 오버레이
+        border: Border.all(
+          color: _getDirectionColor(direction),
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.terminal,
+              size: 48,
+              color: Colors.white.withOpacity(0.8),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              draggingTab.name,
+              style: ref.font.semiBoldText18.copyWith(
+                color: Colors.white.withOpacity(0.9),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: _getDirectionColor(direction).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _getDirectionColor(direction),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                'Will be placed here',
+                style: ref.font.regularText12.copyWith(
+                  color: _getDirectionColor(direction),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 방향별 색상
+  Color _getDirectionColor(SplitDirection direction) {
+    switch (direction) {
+      case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
+        return Colors.green;
+      case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
+        return Colors.blue;
+      case SplitDirection.left:
+      case SplitDirection.leftSmall:
+        return Colors.red;
+      case SplitDirection.right:
+      case SplitDirection.rightSmall:
+        return Colors.orange;
+    }
   }
 }
 

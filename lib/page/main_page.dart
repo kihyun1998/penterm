@@ -4,8 +4,11 @@ import 'package:penterm/core/theme/provider/theme_provider.dart';
 
 import '../core/ui/title_bar/app_title_bar.dart';
 import '../feature/terminal/model/enum_tab_type.dart';
+import '../feature/terminal/model/split_layout_state.dart';
+import '../feature/terminal/model/tab_drag_state.dart';
 import '../feature/terminal/model/tab_info.dart';
 import '../feature/terminal/provider/active_tabinfo_provider.dart';
+import '../feature/terminal/provider/split_layout_provider.dart';
 import '../feature/terminal/provider/tab_drag_provider.dart';
 import '../feature/terminal/ui/split_drop_zone.dart';
 
@@ -34,7 +37,9 @@ class MainScreen extends ConsumerWidget {
                 ),
               ),
             ],
-          ), // 🎯 드래그 상태 디버그 정보
+          ),
+
+          // 🎯 드래그 상태 디버그 정보
           if (dragState.isDragging)
             Positioned(
               top: 60, // 타이틀바 아래쪽에 배치
@@ -93,6 +98,62 @@ class MainScreen extends ConsumerWidget {
                 ),
               ),
             ),
+
+          // 🆕 분할 상태 디버그 정보
+          Positioned(
+            top: 60,
+            right: 10,
+            child: Consumer(
+              builder: (context, ref, child) {
+                final splitState = ref.watch(currentTabSplitStateProvider);
+
+                if (!splitState.isSplit) return const SizedBox.shrink();
+
+                return Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(4),
+                    border:
+                        Border.all(color: ref.color.secondary.withOpacity(0.5)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '🔄 SPLIT DEBUG',
+                        style: ref.font.monoBoldText10.copyWith(
+                          color: ref.color.secondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...splitState.debugInfo.split('\n').map((line) {
+                        if (line.trim().isEmpty) return const SizedBox.shrink();
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: Text(
+                            line,
+                            style: ref.font.monoRegularText10.copyWith(
+                              color: Colors.white,
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -159,13 +220,173 @@ class MainScreen extends ConsumerWidget {
 
   Widget _buildTerminalContent(TabInfo tabInfo, WidgetRef ref) {
     final dragState = ref.watch(tabDragProvider);
+    final splitState = ref.watch(currentTabSplitStateProvider);
+
+    // 🆕 분할 상태에 따른 렌더링
+    if (splitState.isSplit) {
+      return _buildSplitTerminalContent(tabInfo, splitState, ref);
+    } else {
+      return _buildSingleTerminalContent(tabInfo, dragState, ref);
+    }
+  }
+
+  /// 🆕 분할된 터미널 컨텐츠
+  Widget _buildSplitTerminalContent(
+      TabInfo tabInfo, SplitLayoutState splitState, WidgetRef ref) {
+    final orderedPanels = splitState.orderedPanels;
+
+    return SizedBox(
+      key: ValueKey('${tabInfo.id}_split_${splitState.splitType.name}'),
+      width: double.infinity,
+      height: double.infinity,
+      child: splitState.splitType == SplitType.horizontal
+          ? Row(
+              children: orderedPanels
+                  .map((panel) => _buildPanel(panel, ref))
+                  .toList())
+          : Column(
+              children: orderedPanels
+                  .map((panel) => _buildPanel(panel, ref))
+                  .toList()),
+    );
+  }
+
+  /// 🆕 개별 패널 위젯
+  Widget _buildPanel(PanelInfo panel, WidgetRef ref) {
+    return Expanded(
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: panel.isActive ? ref.color.primary : ref.color.border,
+            width: panel.isActive ? 2 : 1,
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        margin: const EdgeInsets.all(4),
+        child: panel.hasTerminal
+            ? _buildTerminalPanel(panel, ref)
+            : _buildEmptyPanel(panel, ref),
+      ),
+    );
+  }
+
+  /// 🆕 터미널이 있는 패널
+  Widget _buildTerminalPanel(PanelInfo panel, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: ref.theme.color.secondaryVariant,
+      child: Stack(
+        children: [
+          // 🆕 패널 상단 드래그 핸들 (3단계에서 구현)
+          // TODO: 3단계에서 패널 드래그 핸들 추가
+
+          // 터미널 컨텐츠
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.terminal,
+                  size: 48,
+                  color: Colors.white,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Terminal: ${panel.terminalId}',
+                  style: ref.font.semiBoldText18.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Panel: ${panel.position.name}',
+                  style: ref.font.regularText14.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
+                if (panel.isActive)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: ref.color.primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: ref.color.primary, width: 1),
+                    ),
+                    child: Text(
+                      'ACTIVE',
+                      style: ref.font.semiBoldText12.copyWith(
+                        color: ref.color.primary,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🆕 빈 패널
+  Widget _buildEmptyPanel(PanelInfo panel, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: ref.theme.color.surface,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_box_outlined,
+              size: 48,
+              color: Colors.white.withOpacity(0.5),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Empty Panel',
+              style: ref.font.semiBoldText18.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Position: ${panel.position.name}',
+              style: ref.font.regularText14.copyWith(
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Drag a terminal here',
+              style: ref.font.regularText12.copyWith(
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 단일 터미널 컨텐츠 (기존 로직)
+  Widget _buildSingleTerminalContent(
+      TabInfo tabInfo, TabDragState dragState, WidgetRef ref) {
+    // 🆕 현재 탭의 분할 상태 확인
+    final splitState = ref.watch(currentTabSplitStateProvider);
 
     // 터미널 탭이 드래그 중인지 확인
     final isTerminalDragging =
         dragState.isDragging && dragState.draggingTab?.type.value == 'terminal';
 
+    // 🆕 이미 분할된 상태라면 드롭존 숨기기
+    final shouldShowDropZones = isTerminalDragging && !splitState.isSplit;
+
     return Stack(
-      key: ValueKey(tabInfo.id),
+      key: ValueKey('${tabInfo.id}_single'),
       children: [
         // 기본 터미널 컨텐츠
         Container(
@@ -194,13 +415,31 @@ class MainScreen extends ConsumerWidget {
                     color: Colors.white70,
                   ),
                 ),
+                // 🆕 분할 상태 표시
+                if (splitState.isSplit)
+                  Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange, width: 1),
+                    ),
+                    child: Text(
+                      'Already Split (${splitState.splitType.name})',
+                      style: ref.font.semiBoldText14.copyWith(
+                        color: Colors.orange,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
         ),
 
-        // 10개 분할 드롭 영역들 (터미널 탭 드래그 중일 때만 표시)
-        if (isTerminalDragging) _TerminalSplitHandler(tabInfo: tabInfo),
+        // 🆕 분할되지 않은 상태에서만 드롭존 표시
+        if (shouldShowDropZones) _TerminalSplitHandler(tabInfo: tabInfo),
       ],
     );
   }

@@ -77,6 +77,38 @@ class TabList extends _$TabList {
     }
   }
 
+  /// 🆕 안전한 탭 제거 (활성 탭 변경하지 않음)
+  void removeTabSafely(String tabId) {
+    final currentTabs = Map<String, TabInfo>.from(state);
+    final tabToRemove = currentTabs[tabId];
+
+    if (tabToRemove == null) {
+      print('❌ Tab not found for removal: $tabId');
+      return;
+    }
+
+    // 고정 탭은 제거할 수 없음
+    if (!tabToRemove.isClosable) {
+      print('❌ Cannot remove fixed tab: $tabId');
+      return;
+    }
+
+    // 현재 활성 탭 확인
+    final activeTabId = ref.read(activeTabProvider);
+
+    if (activeTabId == tabId) {
+      print(
+          '⚠️ Warning: Trying to remove active tab. This should not happen in split operation.');
+      return; // 분할 작업에서는 활성 탭을 제거하지 않음
+    }
+
+    // 안전하게 탭만 제거 (활성 탭 변경 없음)
+    currentTabs.remove(tabId);
+    state = currentTabs;
+
+    print('✅ Tab safely removed: $tabId');
+  }
+
   /// 탭 이름 변경
   void renameTab(String tabId, String newName) {
     final currentTabs = Map<String, TabInfo>.from(state);

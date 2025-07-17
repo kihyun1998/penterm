@@ -6,7 +6,7 @@ part of 'tab_list_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$tabListHash() => r'354915745f559bb3838d6efd16b0254eef322613';
+String _$tabListHash() => r'fa8ac71ce4e5b81a41f0f31fde6c68b2eb145ba4';
 
 /// See also [TabList].
 @ProviderFor(TabList)

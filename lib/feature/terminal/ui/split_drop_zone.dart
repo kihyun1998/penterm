@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:penterm/core/theme/provider/theme_provider.dart';
 
+import '../model/split_layout_state.dart';
 import '../model/tab_info.dart';
+import '../provider/split_layout_provider.dart';
+import '../provider/tab_provider.dart';
 
 enum SplitDirection {
   // 큰 분할 (4개)
@@ -48,13 +51,32 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
 
   @override
   Widget build(BuildContext context) {
+    // 🆕 현재 활성 탭 ID 가져오기
+    final currentActiveTabId = ref.watch(activeTabProvider);
+
     return DragTarget<TabInfo>(
       onWillAcceptWithDetails: (data) {
-        // 터미널 탭만 허용하고, 자기 자신은 제외
-        return data.data.type.value == 'terminal' &&
-            data.data.id != widget.currentTab.id;
+        // 터미널 탭만 허용하고, 자기 자신(현재 활성 탭)은 제외
+        final isTerminalTab = data.data.type.value == 'terminal';
+        final isNotSelf = data.data.id != currentActiveTabId;
+
+        print(
+            '🔍 Will accept? Terminal: $isTerminalTab, NotSelf: $isNotSelf (${data.data.id} != $currentActiveTabId)');
+
+        return isTerminalTab && isNotSelf;
       },
       onMove: (details) {
+        // 🆕 허용되지 않는 드래그라면 hover 이벤트도 차단
+        final currentActiveTabId = ref.read(activeTabProvider);
+        final isTerminalTab = details.data.type.value == 'terminal';
+        final isNotSelf = details.data.id != currentActiveTabId;
+
+        if (!isTerminalTab || !isNotSelf) {
+          print(
+              '🚫 Hover blocked: Terminal: $isTerminalTab, NotSelf: $isNotSelf');
+          return; // hover 이벤트 차단
+        }
+
         if (!_isHovered) {
           setState(() => _isHovered = true);
           widget.onHoverChanged(widget.direction); // 상위에 hover 상태 알림
@@ -68,9 +90,9 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         }
       },
       onAcceptWithDetails: (draggedTab) {
-        // 2단계에서는 실제 분할 처리하지 않음
-        print(
-            '🎯 Split drop accepted: ${draggedTab.data.name} → ${widget.direction.name}');
+        // 🆕 실제 분할 실행
+        _executeSplit(draggedTab.data);
+
         setState(() => _isHovered = false);
         widget.onHoverChanged(null); // hover 해제
       },
@@ -122,6 +144,65 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         );
       },
     );
+  }
+
+  /// 🆕 실제 분할 실행
+  void _executeSplit(TabInfo draggedTab) {
+    print('🎯 Execute split: ${draggedTab.name} → ${widget.direction.name}');
+
+    // SplitDirection을 SplitType과 PanelPosition으로 변환
+    final splitInfo = _convertToSplitInfo(widget.direction);
+
+    print('  └─ SplitType: ${splitInfo.splitType.name}');
+    print('  └─ TargetPosition: ${splitInfo.targetPosition.name}');
+
+    // SplitLayoutProvider를 통해 실제 분할 실행
+    ref.read(splitLayoutProvider.notifier).startSplit(
+          terminalId: draggedTab.id,
+          splitType: splitInfo.splitType,
+          targetPosition: splitInfo.targetPosition,
+        );
+
+    print('✅ Split executed successfully');
+  }
+
+  /// 🆕 SplitDirection을 SplitType과 PanelPosition으로 변환
+  _SplitInfo _convertToSplitInfo(SplitDirection direction) {
+    switch (direction) {
+      // 좌측 배치 -> 좌우 분할, 왼쪽 위치
+      case SplitDirection.left:
+      case SplitDirection.leftSmall:
+        return const _SplitInfo(
+          splitType: SplitType.horizontal,
+          targetPosition: PanelPosition.left,
+        );
+
+      // 우측 배치 -> 좌우 분할, 오른쪽 위치
+      case SplitDirection.right:
+      case SplitDirection.rightSmall:
+        return const _SplitInfo(
+          splitType: SplitType.horizontal,
+          targetPosition: PanelPosition.right,
+        );
+
+      // 상단 배치 -> 상하 분할, 위쪽 위치
+      case SplitDirection.top:
+      case SplitDirection.topSmall:
+      case SplitDirection.topCenter:
+        return const _SplitInfo(
+          splitType: SplitType.vertical,
+          targetPosition: PanelPosition.top,
+        );
+
+      // 하단 배치 -> 상하 분할, 아래쪽 위치
+      case SplitDirection.bottom:
+      case SplitDirection.bottomSmall:
+      case SplitDirection.bottomCenter:
+        return const _SplitInfo(
+          splitType: SplitType.vertical,
+          targetPosition: PanelPosition.bottom,
+        );
+    }
   }
 
   /// 방향별 색상
@@ -208,4 +289,15 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
     print(
         '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.name}');
   }
+}
+
+/// 🆕 SplitDirection 변환 정보를 담는 헬퍼 클래스
+class _SplitInfo {
+  final SplitType splitType;
+  final PanelPosition targetPosition;
+
+  const _SplitInfo({
+    required this.splitType,
+    required this.targetPosition,
+  });
 }
