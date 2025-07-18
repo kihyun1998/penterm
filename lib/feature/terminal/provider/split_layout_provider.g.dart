@@ -32,7 +32,7 @@ final currentTabSplitStateProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CurrentTabSplitStateRef = AutoDisposeProviderRef<SplitLayoutState>;
-String _$splitLayoutHash() => r'7f7fe08f439f66ab208e7eae54b7920b60220e3d';
+String _$splitLayoutHash() => r'4b734bc9c9ce90d4fcbdbf8790b46581f41cb391';
 
 /// See also [SplitLayout].
 @ProviderFor(SplitLayout)

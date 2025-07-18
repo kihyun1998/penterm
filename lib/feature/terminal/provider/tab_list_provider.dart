@@ -56,7 +56,6 @@ class TabList extends _$TabList {
     final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
     if (tabIndex == -1) {
-      print('❌ Tab not found: $tabId');
       return;
     }
 
@@ -64,7 +63,6 @@ class TabList extends _$TabList {
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) {
-      print('❌ Cannot remove fixed tab: $tabId');
       return;
     }
 
@@ -78,8 +76,6 @@ class TabList extends _$TabList {
     if (activeTabId == tabId) {
       ref.read(activeTabProvider.notifier).goToHome();
     }
-
-    print('✅ Tab removed: $tabId (index: $tabIndex)');
   }
 
   /// 🆕 안전한 탭 제거 (활성 탭 변경하지 않음)
@@ -87,7 +83,6 @@ class TabList extends _$TabList {
     final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
     if (tabIndex == -1) {
-      print('❌ Tab not found for removal: $tabId');
       return;
     }
 
@@ -95,7 +90,6 @@ class TabList extends _$TabList {
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) {
-      print('❌ Cannot remove fixed tab: $tabId');
       return;
     }
 
@@ -103,8 +97,6 @@ class TabList extends _$TabList {
     final activeTabId = ref.read(activeTabProvider);
 
     if (activeTabId == tabId) {
-      print(
-          '⚠️ Warning: Trying to remove active tab. This should not happen in split operation.');
       return; // 분할 작업에서는 활성 탭을 제거하지 않음
     }
 
@@ -112,8 +104,6 @@ class TabList extends _$TabList {
     final newState = List<TabInfo>.from(state);
     newState.removeAt(tabIndex);
     state = newState;
-
-    print('✅ Tab safely removed: $tabId (index: $tabIndex)');
   }
 
   /// 탭 이름 변경
@@ -121,26 +111,21 @@ class TabList extends _$TabList {
     final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
     if (tabIndex == -1) {
-      print('❌ Tab not found for rename: $tabId');
       return;
     }
 
     final newState = List<TabInfo>.from(state);
     newState[tabIndex] = newState[tabIndex].copyWith(name: newName);
     state = newState;
-
-    print('✅ Tab renamed: $tabId → $newName');
   }
 
-  /// 🚀 탭 순서 변경 (드래그 앤 드롭용) - 혁신적으로 간단!
+  /// 🚀 탭 순서 변경 (드래그 앤 드롭용)
   void reorderTab(int fromIndex, int toIndex) {
     // 인덱스 유효성 검사
     if (fromIndex < 0 ||
         fromIndex >= state.length ||
         toIndex < 0 ||
         toIndex >= state.length) {
-      print(
-          '❌ Invalid index: fromIndex=$fromIndex, toIndex=$toIndex, length=${state.length}');
       return;
     }
 
@@ -148,7 +133,6 @@ class TabList extends _$TabList {
 
     // 고정 탭은 이동할 수 없음
     if (!tabToMove.isClosable) {
-      print('❌ Cannot move fixed tab: ${tabToMove.name}');
       return;
     }
 
@@ -157,9 +141,6 @@ class TabList extends _$TabList {
     final tab = newState.removeAt(fromIndex);
     newState.insert(toIndex, tab);
     state = newState;
-
-    print(
-        '✅ Tab reordered: ${tabToMove.name} from index $fromIndex to $toIndex');
   }
 
   /// 🆕 ID로 탭 찾기 (헬퍼 메서드)
@@ -189,14 +170,5 @@ class TabList extends _$TabList {
   /// 🆕 고정 탭들 가져오기 (HOME, SFTP)
   List<TabInfo> getFixedTabs() {
     return state.where((tab) => !tab.isClosable).toList();
-  }
-
-  /// 🚀 디버그: 현재 탭 순서 출력
-  void printTabOrder() {
-    print('📋 Current tab order:');
-    for (int i = 0; i < state.length; i++) {
-      final tab = state[i];
-      print('  [$i] ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
-    }
   }
 }

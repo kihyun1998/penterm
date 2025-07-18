@@ -3,98 +3,80 @@
 
 ```
 penterm/
-├── lib/
+└── lib/
     ├── core/
-    │   ├── const/
-    │   │   ├── enum_debounce_key.dart
-    │   │   └── enum_hive_key.dart
-    │   ├── localization/
-    │   │   ├── l10n/
-    │   │   │   ├── intl_en.arb
-    │   │   │   └── intl_ko.arb
-    │   │   └── provider/
-    │   │   │   ├── language_provider.dart
-    │   │   │   └── locale_state_provider.dart
-    │   ├── theme/
-    │   │   ├── foundation/
-    │   │   │   ├── app_color.dart
-    │   │   │   ├── app_font.dart
-    │   │   │   ├── app_mode.dart
-    │   │   │   └── app_theme.dart
-    │   │   ├── provider/
-    │   │   │   └── theme_provider.dart
-    │   │   ├── resources/
-    │   │   │   ├── dark_palette.dart
-    │   │   │   ├── font.dart
-    │   │   │   └── light_palette.dart
-    │   │   ├── dark_theme.dart
-    │   │   └── light_theme.dart
-    │   ├── ui/
-    │   │   ├── title_bar/
-    │   │   │   ├── provider/
-    │   │   │   │   └── is_window_maximized_provider.dart
-    │   │   │   ├── app_title_bar.dart
-    │   │   │   ├── tab_drop_zone.dart
-    │   │   │   └── terminal_tab_widget.dart
-    │   │   ├── app_button.dart
-    │   │   ├── app_icon_button.dart
-    │   │   ├── app_icon_tab.dart
-    │   │   └── debug_overlays.dart
-    │   └── util/
-    │   │   ├── debounce/
-    │   │       ├── debounce_operation.dart
-    │   │       └── debounce_service.dart
-    │   │   └── svg/
-    │   │       ├── enum/
-    │   │           └── color_target.dart
-    │   │       ├── model/
-    │   │           └── enum_svg_asset.dart
-    │   │       ├── widget/
-    │   │           └── svg_icon.dart
-    │   │       └── svg_util.dart
+        ├── const/
+        │   ├── enum_debounce_key.dart
+        │   └── enum_hive_key.dart
+        ├── localization/
+        │   ├── l10n/
+        │   │   ├── intl_en.arb
+        │   │   └── intl_ko.arb
+        │   └── provider/
+        │   │   ├── language_provider.dart
+        │   │   └── locale_state_provider.dart
+        ├── theme/
+        │   ├── foundation/
+        │   │   ├── app_color.dart
+        │   │   ├── app_font.dart
+        │   │   ├── app_mode.dart
+        │   │   └── app_theme.dart
+        │   ├── provider/
+        │   │   └── theme_provider.dart
+        │   ├── resources/
+        │   │   ├── dark_palette.dart
+        │   │   ├── font.dart
+        │   │   └── light_palette.dart
+        │   ├── dark_theme.dart
+        │   └── light_theme.dart
+        ├── ui/
+        │   ├── title_bar/
+        │   │   ├── provider/
+        │   │   │   └── is_window_maximized_provider.dart
+        │   │   ├── app_title_bar.dart
+        │   │   ├── tab_drop_zone.dart
+        │   │   └── terminal_tab_widget.dart
+        │   ├── app_button.dart
+        │   ├── app_icon_button.dart
+        │   ├── app_icon_tab.dart
+        │   └── debug_overlays.dart
+        └── util/
+        │   ├── debounce/
+        │       ├── debounce_operation.dart
+        │       └── debounce_service.dart
+        │   └── svg/
+        │       ├── enum/
+        │           └── color_target.dart
+        │       ├── model/
+        │           └── enum_svg_asset.dart
+        │       ├── widget/
+        │           └── svg_icon.dart
+        │       └── svg_util.dart
     ├── feature/
-    │   └── terminal/
-    │   │   ├── model/
-    │   │       ├── enum_tab_type.dart
-    │   │       ├── split_layout_state.dart
-    │   │       ├── tab_info.dart
-    │   │       ├── terminal_drag_data.dart
-    │   │       └── terminal_drag_state.dart
-    │   │   ├── provider/
-    │   │       ├── active_tabinfo_provider.dart
-    │   │       ├── split_layout_provider.dart
-    │   │       ├── tab_list_provider.dart
-    │   │       ├── tab_provider.dart
-    │   │       └── terminal_drag_provider.dart
-    │   │   └── ui/
-    │   │       ├── split_drop_zone.dart
-    │   │       ├── terminal_canvas.dart
-    │   │       ├── terminal_panel.dart
-    │   │       └── terminal_split_handler.dart
+        └── terminal/
+        │   ├── model/
+        │       ├── enum_tab_type.dart
+        │       ├── split_layout_state.dart
+        │       ├── tab_info.dart
+        │       ├── terminal_drag_data.dart
+        │       └── terminal_drag_state.dart
+        │   ├── provider/
+        │       ├── active_tabinfo_provider.dart
+        │       ├── split_layout_provider.dart
+        │       ├── tab_list_provider.dart
+        │       ├── tab_provider.dart
+        │       └── terminal_drag_provider.dart
+        │   └── ui/
+        │       ├── split_drop_zone.dart
+        │       ├── terminal_canvas.dart
+        │       ├── terminal_panel.dart
+        │       └── terminal_split_handler.dart
     ├── page/
-    │   ├── example_heme.dart
-    │   └── main_page.dart
+        ├── example_heme.dart
+        └── main_page.dart
     └── main.dart
-└── function.md
 ```
 
-## function.md
-```md
-1. mobaXterm 같은 버전 
-    - 탭 추가/제거
-    - cli로 탭 추가/제거 (id로 관리)
-    - 탭 분할 (드래그 앤 드롭)
-    - cli로 분할된 탭에 관여
-    - ssh,sftp 접속 (비밀번호, ssh key 접속)
-    - cli로 비밀번호 ssh key 접속
-    - 검색
-    - local terminal
-
-2. putty 같은 버전
-    - 기본 실행 시 local terminal
-    - ssh 접속
-    - ssh password/sshkey 접속 cli 지원
-```
 ## lib/core/const/enum_debounce_key.dart
 ```dart
 enum DebounceKey {
@@ -4355,11 +4337,6 @@ class SplitLayout extends _$SplitLayout {
     return state[activeTabId] ?? SplitLayoutState(activeTabId: activeTabId);
   }
 
-  /// 특정 탭의 분할 상태 반환
-  SplitLayoutState getTabSplitState(String tabId) {
-    return state[tabId] ?? SplitLayoutState(activeTabId: tabId);
-  }
-
   /// 특정 탭의 분할 상태 업데이트
   void _updateTabSplitState(String tabId, SplitLayoutState newState) {
     state = {
@@ -4387,16 +4364,11 @@ class SplitLayout extends _$SplitLayout {
 
     // 이미 분할된 상태라면 로그만 출력하고 리턴
     if (currentState.isSplit) {
-      print('❌ Already split: ${currentState.splitType.name}');
       return;
     }
 
     // 현재 활성 탭 ID (기존 터미널)
     final currentActiveTabId = currentState.activeTabId;
-
-    print(
-        '🚀 Start split: $terminalId → ${splitType.name} (${targetPosition.name})');
-    print('  └─ Current active tab: $currentActiveTabId');
 
     // 새로운 패널들 생성
     final positions = PanelPosition.forSplitType(splitType);
@@ -4427,9 +4399,6 @@ class SplitLayout extends _$SplitLayout {
         position: position,
         isActive: isActive,
       );
-
-      print(
-          '  └─ Panel created: $panelId (${position.name}) - ${assignedTerminalId ?? 'empty'}${isActive ? ' [ACTIVE]' : ''}');
     }
 
     // 새로운 분할 상태 생성
@@ -4442,240 +4411,12 @@ class SplitLayout extends _$SplitLayout {
     _updateCurrentTabSplitState(newState);
 
     // 현재 활성 탭 이름 변경 (Split 표시)
-    print('✏️ Updating active tab name to show split state');
+
     ref.read(tabListProvider.notifier).renameTab(currentActiveTabId, 'Split');
 
     // 드래그된 터미널 탭을 탭 목록에서 안전하게 제거
-    print('🗑️ Safely removing dragged terminal tab: $terminalId');
+
     ref.read(tabListProvider.notifier).removeTabSafely(terminalId);
-
-    // 🆕 제거 후 탭 상태 확인
-    final remainingTabs = ref.read(tabListProvider);
-    print('📋 Remaining tabs after removal:');
-    for (final tab in remainingTabs) {
-      print('  └─ ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
-    }
-
-    print('✅ Split created successfully');
-    print(newState.debugInfo);
-  }
-
-  /// 분할 해제 (모든 패널을 제거하고 일반 탭으로 되돌림)
-  /// [terminalId]: 분할 해제 후 남겨둘 터미널 ID (null이면 모든 터미널 제거)
-  void clearSplit({String? terminalId}) {
-    final currentState = getCurrentTabSplitState();
-
-    if (!currentState.isSplit) {
-      print('❌ No split to clear');
-      return;
-    }
-
-    print('🔄 Clear split for tab: ${currentState.activeTabId}');
-
-    // 분할된 패널들의 터미널 ID 수집
-    final terminalIds = currentState.panels.values
-        .where((panel) => panel.hasTerminal)
-        .map((panel) => panel.terminalId!)
-        .toList();
-
-    print('  └─ Found terminals in split: $terminalIds');
-
-    // 현재 활성 탭 이름 복원
-    print('✏️ Restoring active tab name');
-    ref
-        .read(tabListProvider.notifier)
-        .renameTab(currentState.activeTabId, 'Terminal');
-
-    // 분할 해제 시 다른 터미널들을 새 탭으로 추가
-    final tabListNotifier = ref.read(tabListProvider.notifier);
-    for (int i = 0; i < terminalIds.length; i++) {
-      final currentTerminalId = terminalIds[i];
-      if (currentTerminalId != currentState.activeTabId) {
-        // 현재 활성 탭이 아닌 터미널들만 다시 추가
-        print('  └─ Recreating tab for terminal: $currentTerminalId');
-        tabListNotifier.addTerminalTab(); // 새 탭 생성 (임시)
-        // TODO: 실제로는 원래 터미널 정보로 복원해야 함
-      }
-    }
-
-    if (terminalId != null) {
-      print('  └─ Keeping terminal: $terminalId');
-    }
-
-    // 분할 해제된 새로운 상태
-    final newState = SplitLayoutState(
-      activeTabId: currentState.activeTabId,
-      splitType: SplitType.none,
-      panels: {},
-      activePanelId: null,
-    );
-
-    _updateCurrentTabSplitState(newState);
-    print('✅ Split cleared successfully');
-  }
-
-  /// 터미널을 특정 패널로 이동
-  /// [terminalId]: 이동할 터미널 ID
-  /// [targetPanelId]: 대상 패널 ID
-  void moveTerminalToPanel({
-    required String terminalId,
-    required String targetPanelId,
-  }) {
-    final currentState = getCurrentTabSplitState();
-
-    if (!currentState.isSplit) {
-      print('❌ Cannot move terminal: not split');
-      return;
-    }
-
-    final targetPanel = currentState.panels[targetPanelId];
-    if (targetPanel == null) {
-      print('❌ Target panel not found: $targetPanelId');
-      return;
-    }
-
-    print('🔄 Move terminal: $terminalId → ${targetPanel.position.name}');
-
-    final updatedPanels = <String, PanelInfo>{};
-
-    for (final entry in currentState.panels.entries) {
-      final panelId = entry.key;
-      final panel = entry.value;
-
-      if (panel.terminalId == terminalId) {
-        // 기존 터미널이 있던 패널에서 제거
-        updatedPanels[panelId] = panel.clearTerminal().deactivate();
-        print('  └─ Removed from: ${panel.position.name}');
-      } else if (panelId == targetPanelId) {
-        // 대상 패널에 터미널 할당
-        updatedPanels[panelId] = panel.assignTerminal(terminalId).activate();
-        print('  └─ Added to: ${panel.position.name}');
-      } else {
-        // 다른 패널들은 그대로 유지 (비활성화)
-        updatedPanels[panelId] = panel.deactivate();
-      }
-    }
-
-    final newState = currentState.copyWith(
-      panels: updatedPanels,
-      activePanelId: targetPanelId,
-    );
-
-    _updateCurrentTabSplitState(newState);
-    print('✅ Terminal moved successfully');
-  }
-
-  /// 활성 패널 변경
-  /// [panelId]: 활성화할 패널 ID
-  void setActivePanel(String panelId) {
-    final currentState = getCurrentTabSplitState();
-
-    if (!currentState.isSplit) {
-      print('❌ Cannot set active panel: not split');
-      return;
-    }
-
-    final targetPanel = currentState.panels[panelId];
-    if (targetPanel == null) {
-      print('❌ Panel not found: $panelId');
-      return;
-    }
-
-    print('🎯 Set active panel: ${targetPanel.position.name}');
-
-    // 모든 패널을 비활성화하고 타겟 패널만 활성화
-    final updatedPanels = <String, PanelInfo>{};
-    for (final entry in currentState.panels.entries) {
-      final currentPanelId = entry.key;
-      final panel = entry.value;
-
-      updatedPanels[currentPanelId] =
-          currentPanelId == panelId ? panel.activate() : panel.deactivate();
-    }
-
-    final newState = currentState.copyWith(
-      panels: updatedPanels,
-      activePanelId: panelId,
-    );
-
-    _updateCurrentTabSplitState(newState);
-  }
-
-  /// 분할 방향 변경
-  /// [newSplitType]: 새로운 분할 방향
-  /// 기존 터미널들의 위치는 첫 번째, 두 번째 순서로 재배치
-  void changeSplitType(SplitType newSplitType) {
-    final currentState = getCurrentTabSplitState();
-
-    if (!currentState.isSplit) {
-      print('❌ Cannot change split type: not split');
-      return;
-    }
-
-    if (currentState.splitType == newSplitType) {
-      print('❌ Same split type: ${newSplitType.name}');
-      return;
-    }
-
-    print(
-        '🔄 Change split type: ${currentState.splitType.name} → ${newSplitType.name}');
-
-    // 기존 패널들을 순서대로 정렬
-    final orderedPanels = currentState.orderedPanels;
-    final newPositions = PanelPosition.forSplitType(newSplitType);
-
-    final newPanels = <String, PanelInfo>{};
-    String? newActivePanelId;
-
-    for (int i = 0; i < newPositions.length && i < orderedPanels.length; i++) {
-      final oldPanel = orderedPanels[i];
-      final newPosition = newPositions[i];
-      final newPanelId =
-          '${currentState.activeTabId}_panel_${newPosition.name}';
-
-      final newPanel = PanelInfo(
-        id: newPanelId,
-        terminalId: oldPanel.terminalId,
-        position: newPosition,
-        isActive: oldPanel.isActive,
-      );
-
-      newPanels[newPanelId] = newPanel;
-
-      if (newPanel.isActive) {
-        newActivePanelId = newPanelId;
-      }
-
-      print(
-          '  └─ ${oldPanel.position.name} → ${newPosition.name} (${oldPanel.terminalId ?? 'empty'})');
-    }
-
-    final newState = currentState.copyWith(
-      splitType: newSplitType,
-      panels: newPanels,
-      activePanelId: newActivePanelId,
-    );
-
-    _updateCurrentTabSplitState(newState);
-    print('✅ Split type changed successfully');
-    print(newState.debugInfo);
-  }
-
-  /// 특정 탭의 분할 상태 제거 (탭이 삭제될 때 호출)
-  void removeTabSplit(String tabId) {
-    if (state.containsKey(tabId)) {
-      final newState = Map<String, SplitLayoutState>.from(state);
-      newState.remove(tabId);
-      state = newState;
-      print('🗑️ Removed split state for tab: $tabId');
-    }
-  }
-
-  /// 디버그: 현재 상태 출력
-  void printCurrentState() {
-    final currentState = getCurrentTabSplitState();
-    print('🐛 Current Split State:');
-    print(currentState.debugInfo);
   }
 }
 
@@ -4750,7 +4491,6 @@ class TabList extends _$TabList {
     final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
     if (tabIndex == -1) {
-      print('❌ Tab not found: $tabId');
       return;
     }
 
@@ -4758,7 +4498,6 @@ class TabList extends _$TabList {
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) {
-      print('❌ Cannot remove fixed tab: $tabId');
       return;
     }
 
@@ -4772,8 +4511,6 @@ class TabList extends _$TabList {
     if (activeTabId == tabId) {
       ref.read(activeTabProvider.notifier).goToHome();
     }
-
-    print('✅ Tab removed: $tabId (index: $tabIndex)');
   }
 
   /// 🆕 안전한 탭 제거 (활성 탭 변경하지 않음)
@@ -4781,7 +4518,6 @@ class TabList extends _$TabList {
     final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
     if (tabIndex == -1) {
-      print('❌ Tab not found for removal: $tabId');
       return;
     }
 
@@ -4789,7 +4525,6 @@ class TabList extends _$TabList {
 
     // 고정 탭은 제거할 수 없음
     if (!tabToRemove.isClosable) {
-      print('❌ Cannot remove fixed tab: $tabId');
       return;
     }
 
@@ -4797,8 +4532,6 @@ class TabList extends _$TabList {
     final activeTabId = ref.read(activeTabProvider);
 
     if (activeTabId == tabId) {
-      print(
-          '⚠️ Warning: Trying to remove active tab. This should not happen in split operation.');
       return; // 분할 작업에서는 활성 탭을 제거하지 않음
     }
 
@@ -4806,8 +4539,6 @@ class TabList extends _$TabList {
     final newState = List<TabInfo>.from(state);
     newState.removeAt(tabIndex);
     state = newState;
-
-    print('✅ Tab safely removed: $tabId (index: $tabIndex)');
   }
 
   /// 탭 이름 변경
@@ -4815,26 +4546,21 @@ class TabList extends _$TabList {
     final tabIndex = state.indexWhere((tab) => tab.id == tabId);
 
     if (tabIndex == -1) {
-      print('❌ Tab not found for rename: $tabId');
       return;
     }
 
     final newState = List<TabInfo>.from(state);
     newState[tabIndex] = newState[tabIndex].copyWith(name: newName);
     state = newState;
-
-    print('✅ Tab renamed: $tabId → $newName');
   }
 
-  /// 🚀 탭 순서 변경 (드래그 앤 드롭용) - 혁신적으로 간단!
+  /// 🚀 탭 순서 변경 (드래그 앤 드롭용)
   void reorderTab(int fromIndex, int toIndex) {
     // 인덱스 유효성 검사
     if (fromIndex < 0 ||
         fromIndex >= state.length ||
         toIndex < 0 ||
         toIndex >= state.length) {
-      print(
-          '❌ Invalid index: fromIndex=$fromIndex, toIndex=$toIndex, length=${state.length}');
       return;
     }
 
@@ -4842,7 +4568,6 @@ class TabList extends _$TabList {
 
     // 고정 탭은 이동할 수 없음
     if (!tabToMove.isClosable) {
-      print('❌ Cannot move fixed tab: ${tabToMove.name}');
       return;
     }
 
@@ -4851,9 +4576,6 @@ class TabList extends _$TabList {
     final tab = newState.removeAt(fromIndex);
     newState.insert(toIndex, tab);
     state = newState;
-
-    print(
-        '✅ Tab reordered: ${tabToMove.name} from index $fromIndex to $toIndex');
   }
 
   /// 🆕 ID로 탭 찾기 (헬퍼 메서드)
@@ -4883,15 +4605,6 @@ class TabList extends _$TabList {
   /// 🆕 고정 탭들 가져오기 (HOME, SFTP)
   List<TabInfo> getFixedTabs() {
     return state.where((tab) => !tab.isClosable).toList();
-  }
-
-  /// 🚀 디버그: 현재 탭 순서 출력
-  void printTabOrder() {
-    print('📋 Current tab order:');
-    for (int i = 0; i < state.length; i++) {
-      final tab = state[i];
-      print('  [$i] ${tab.name} (${tab.id}) - closable: ${tab.isClosable}');
-    }
   }
 }
 
@@ -4933,7 +4646,6 @@ class ActiveTab extends _$ActiveTab {
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../model/tab_info.dart';
 import '../model/terminal_drag_data.dart';
 import '../model/terminal_drag_state.dart'; // 🚀 정확한 파일명으로 변경
 import 'tab_list_provider.dart';
@@ -4958,12 +4670,8 @@ class TerminalDrag extends _$TerminalDrag {
     final draggingTab =
         draggableTabs.where((tab) => tab.id == tabId).firstOrNull;
     if (draggingTab == null) {
-      print('❌ Tab not found for drag: $tabId');
       return;
     }
-
-    print(
-        '🚀 Start tab drag: ${draggingTab.name} (index ${draggableTabs.indexOf(draggingTab)})');
 
     // 🚀 TerminalDragData 생성 (탭에서 시작)
     final dragData = TerminalDragData(
@@ -4983,8 +4691,6 @@ class TerminalDrag extends _$TerminalDrag {
     final tabList = ref.read(tabListProvider);
     final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
 
-    print('🚀 Start panel drag: $displayName ($terminalId)');
-
     // 🚀 TerminalDragData 생성 (패널에서 시작)
     final dragData = TerminalDragData(
       terminalId: terminalId,
@@ -5001,25 +4707,12 @@ class TerminalDrag extends _$TerminalDrag {
   /// 🚀 타겟 index 업데이트 - 동일
   void updateTarget(int newTargetIndex, {Offset? dragPosition}) {
     if (!state.isDragging) {
-      print('❌ Cannot update target: not dragging');
       return;
     }
 
     // 🚀 유효한 index인지 확인
     if (newTargetIndex < 0 || newTargetIndex >= state.currentTabs.length) {
-      print(
-          '❌ Target index out of range: $newTargetIndex (max: ${state.currentTabs.length - 1})');
       return;
-    }
-
-    final targetTab = state.currentTabs[newTargetIndex];
-
-    // 자기 자신에게 드롭하는 것도 허용 (원래 자리로 돌아가기)
-    final draggingIndex = state.draggingIndex;
-    if (draggingIndex == newTargetIndex) {
-      print('🔄 Drop on self: ${targetTab.name} (return to original position)');
-    } else {
-      print('🎯 Update target: index $newTargetIndex (${targetTab.name})');
     }
 
     state = state.updateTarget(
@@ -5038,7 +4731,6 @@ class TerminalDrag extends _$TerminalDrag {
   /// 🚀 드래그 종료 (실제 순서 변경) - source 체크 추가
   void endDrag() {
     if (!state.isDragging) {
-      print('❌ Cannot end drag: not dragging');
       return;
     }
 
@@ -5046,23 +4738,13 @@ class TerminalDrag extends _$TerminalDrag {
     final targetIndex = state.targetIndex;
     final draggingIndex = state.draggingIndex;
 
-    print('✅ End drag: ${draggingData.debugInfo}');
-
-    // expectedResult의 순서 표시 (디버그용)
-    final expectedOrder = state.expectedResult
-        .asMap()
-        .entries
-        .map((e) => '${e.value.name}[${e.key}]')
-        .join(', ');
-    print('📋 Expected result: $expectedOrder');
-
     // 🚀 source에 따른 처리 분기
     switch (draggingData.source) {
       case DragSource.tab:
         _handleTabDragEnd(draggingData, targetIndex, draggingIndex);
         break;
       case DragSource.panel:
-        _handlePanelDragEnd(draggingData, targetIndex);
+        // _handlePanelDragEnd(draggingData, targetIndex);
         break;
     }
 
@@ -5077,33 +4759,20 @@ class TerminalDrag extends _$TerminalDrag {
     if (targetIndex != null &&
         draggingIndex != null &&
         targetIndex != draggingIndex) {
-      print('🔄 Applying tab index change...');
       _applyTabIndexChange(dragData.terminalId, draggingIndex, targetIndex);
-    } else {
-      print('📌 No tab index change needed');
-    }
-  }
-
-  /// 패널 드래그 종료 처리 (추후 구현)
-  void _handlePanelDragEnd(TerminalDragData dragData, int? targetIndex) {
-    print('🔄 Panel drag ended: ${dragData.debugInfo}');
-    // TODO: 패널 드래그 처리 로직 추가 (Phase 3-5에서 구현)
+    } else {}
   }
 
   /// 드래그 취소
   void cancelDrag() {
     if (!state.isDragging) return;
 
-    print('❌ Cancel drag: ${state.draggingData?.debugInfo}');
     state = state.endDrag();
   }
 
   /// 🚀 실제 탭 순서 변경 적용 (기존과 동일)
   void _applyTabIndexChange(String draggingTabId, int fromIndex, int toIndex) {
     final tabListNotifier = ref.read(tabListProvider.notifier);
-
-    print(
-        '🔧 Index change: $draggingTabId from index $fromIndex to index $toIndex');
 
     // 🚀 전체 탭 리스트에서의 실제 인덱스 계산
     final allTabs = ref.read(tabListProvider);
@@ -5118,22 +4787,11 @@ class TerminalDrag extends _$TerminalDrag {
         allTabs.indexWhere((tab) => tab.id == targetDraggableTab.id);
 
     if (realFromIndex == -1 || realToIndex == -1) {
-      print(
-          '❌ Could not find real indices: realFromIndex=$realFromIndex, realToIndex=$realToIndex');
       return;
     }
 
-    print('🔧 Real indices: $realFromIndex → $realToIndex');
-
     // 🚀 TabListProvider의 간단한 reorderTab 메서드 호출!
     tabListNotifier.reorderTab(realFromIndex, realToIndex);
-
-    print('✅ Index change applied successfully');
-  }
-
-  /// 디버그 정보 출력
-  void printDebugInfo() {
-    print('🐛 Debug Info:\n${state.debugInfo}');
   }
 }
 
@@ -5204,9 +4862,6 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         final isFromTab = data.data.isFromTab;
         final isTerminalTab = data.data.terminalId != currentActiveTabId;
 
-        print(
-            '🔍 Will accept? FromTab: $isFromTab, NotSelf: $isTerminalTab (${data.data.terminalId} != $currentActiveTabId)');
-
         return isFromTab && isTerminalTab;
       },
       onMove: (details) {
@@ -5216,15 +4871,12 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         final isTerminalTab = details.data.terminalId != currentActiveTabId;
 
         if (!isFromTab || !isTerminalTab) {
-          print(
-              '🚫 Hover blocked: FromTab: $isFromTab, NotSelf: $isTerminalTab');
           return; // hover 이벤트 차단
         }
 
         if (!_isHovered) {
           setState(() => _isHovered = true);
           widget.onHoverChanged(widget.direction); // 상위에 hover 상태 알림
-          _logSplitDetection();
         }
       },
       onLeave: (data) {
@@ -5248,7 +4900,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         return Container(
           decoration: BoxDecoration(
             color: _isHovered
-                ? _getDirectionColor().withOpacity(0.1)
+                ? _getDirectionColor().withValues(alpha: 0.1)
                 : Colors.transparent,
             border: _isHovered
                 ? Border.all(
@@ -5256,7 +4908,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
                     width: 1,
                   )
                 : Border.all(
-                    color: Colors.white.withOpacity(0.1), // 영역 구분용 경계선
+                    color: Colors.white.withValues(alpha: 0.1), // 영역 구분용 경계선
                     width: 0.5,
                   ),
             borderRadius: BorderRadius.circular(4),
@@ -5285,7 +4937,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
                   child: Text(
                     _getDirectionText(),
                     style: ref.font.regularText10.copyWith(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -5296,24 +4948,14 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
 
   /// 🆕 실제 분할 실행
   void _executeSplit(TerminalDragData draggedData) {
-    // 🚀 변경
-    print(
-        '🎯 Execute split: ${draggedData.displayName} → ${widget.direction.name}');
-
-    // SplitDirection을 SplitType과 PanelPosition으로 변환
     final splitInfo = _convertToSplitInfo(widget.direction);
-
-    print('  └─ SplitType: ${splitInfo.splitType.name}');
-    print('  └─ TargetPosition: ${splitInfo.targetPosition.name}');
 
     // SplitLayoutProvider를 통해 실제 분할 실행
     ref.read(splitLayoutProvider.notifier).startSplit(
-          terminalId: draggedData.terminalId, // 🚀 변경
+          terminalId: draggedData.terminalId,
           splitType: splitInfo.splitType,
           targetPosition: splitInfo.targetPosition,
         );
-
-    print('✅ Split executed successfully');
   }
 
   /// 🆕 SplitDirection을 SplitType과 PanelPosition으로 변환
@@ -5419,25 +5061,6 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
       case SplitDirection.bottomCenter:
         return 'Bot-C';
     }
-  }
-
-  /// 콘솔 로그 출력
-  void _logSplitDetection() {
-    final emoji = {
-      SplitDirection.top: '🟢',
-      SplitDirection.topSmall: '🟢',
-      SplitDirection.topCenter: '🟢',
-      SplitDirection.bottom: '🔵',
-      SplitDirection.bottomSmall: '🔵',
-      SplitDirection.bottomCenter: '🔵',
-      SplitDirection.left: '🔴',
-      SplitDirection.leftSmall: '🔴',
-      SplitDirection.right: '🟡',
-      SplitDirection.rightSmall: '🟡',
-    }[widget.direction];
-
-    print(
-        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.displayName}');
   }
 }
 
@@ -5760,7 +5383,7 @@ class _TerminalPanelContent extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: ref.color.primary.withOpacity(0.2),
+                        color: ref.color.primary..withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: ref.color.primary, width: 1),
                       ),
@@ -5801,7 +5424,6 @@ class _PanelDragHandle extends ConsumerWidget {
       feedback: _PanelDragFeedback(panel: panel),
       childWhenDragging: _DragHandleUI(panel: panel, isDragging: true),
       onDragStarted: () {
-        print('🚀 Panel drag started: ${panel.terminalId}');
         ref.read(terminalDragProvider.notifier).startPanelDrag(
               panel.terminalId!,
               terminalDisplayName,
@@ -5813,11 +5435,9 @@ class _PanelDragHandle extends ConsumerWidget {
             .updatePosition(details.globalPosition);
       },
       onDragEnd: (details) {
-        print('✅ Panel drag ended: ${panel.terminalId}');
         ref.read(terminalDragProvider.notifier).endDrag();
       },
       onDraggableCanceled: (velocity, offset) {
-        print('❌ Panel drag canceled: ${panel.terminalId}');
         ref.read(terminalDragProvider.notifier).cancelDrag();
       },
       child: _DragHandleUI(panel: panel, isDragging: false),
@@ -5839,8 +5459,8 @@ class _DragHandleUI extends ConsumerWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: panel.isActive
-            ? ref.color.primary.withOpacity(isDragging ? 0.3 : 0.1)
-            : ref.color.surface.withOpacity(isDragging ? 0.3 : 0.1),
+            ? ref.color.primary.withValues(alpha: isDragging ? 0.3 : 0.1)
+            : ref.color.surface.withValues(alpha: isDragging ? 0.3 : 0.1),
         border: Border(
           bottom: BorderSide(
             color: panel.isActive ? ref.color.primary : ref.color.border,
@@ -5875,7 +5495,7 @@ class _DragHandleUI extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: ref.color.surfaceVariant.withOpacity(0.5),
+              color: ref.color.surfaceVariant..withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -5911,12 +5531,12 @@ class _PanelDragFeedback extends ConsumerWidget {
           border: Border.all(color: ref.color.primary, width: 2),
           boxShadow: [
             BoxShadow(
-              color: ref.color.primary.withOpacity(0.5),
+              color: ref.color.primary..withValues(alpha: 0.5),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
             BoxShadow(
-              color: ref.color.neonPurple.withOpacity(0.3),
+              color: ref.color.neonPurple..withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -5971,27 +5591,27 @@ class _EmptyTerminalPanel extends ConsumerWidget {
             Icon(
               Icons.add_box_outlined,
               size: 48,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white..withValues(alpha: 0.5),
             ),
             const SizedBox(height: 12),
             Text(
               'Empty Panel',
               style: ref.font.semiBoldText18.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Position: ${panel.position.name}',
               style: ref.font.regularText14.copyWith(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white..withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 12),
             Text(
               'Drag a terminal here',
               style: ref.font.regularText12.copyWith(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white..withValues(alpha: 0.5),
               ),
             ),
           ],

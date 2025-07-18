@@ -62,9 +62,6 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         final isFromTab = data.data.isFromTab;
         final isTerminalTab = data.data.terminalId != currentActiveTabId;
 
-        print(
-            '🔍 Will accept? FromTab: $isFromTab, NotSelf: $isTerminalTab (${data.data.terminalId} != $currentActiveTabId)');
-
         return isFromTab && isTerminalTab;
       },
       onMove: (details) {
@@ -74,15 +71,12 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         final isTerminalTab = details.data.terminalId != currentActiveTabId;
 
         if (!isFromTab || !isTerminalTab) {
-          print(
-              '🚫 Hover blocked: FromTab: $isFromTab, NotSelf: $isTerminalTab');
           return; // hover 이벤트 차단
         }
 
         if (!_isHovered) {
           setState(() => _isHovered = true);
           widget.onHoverChanged(widget.direction); // 상위에 hover 상태 알림
-          _logSplitDetection();
         }
       },
       onLeave: (data) {
@@ -106,7 +100,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
         return Container(
           decoration: BoxDecoration(
             color: _isHovered
-                ? _getDirectionColor().withOpacity(0.1)
+                ? _getDirectionColor().withValues(alpha: 0.1)
                 : Colors.transparent,
             border: _isHovered
                 ? Border.all(
@@ -114,7 +108,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
                     width: 1,
                   )
                 : Border.all(
-                    color: Colors.white.withOpacity(0.1), // 영역 구분용 경계선
+                    color: Colors.white.withValues(alpha: 0.1), // 영역 구분용 경계선
                     width: 0.5,
                   ),
             borderRadius: BorderRadius.circular(4),
@@ -143,7 +137,7 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
                   child: Text(
                     _getDirectionText(),
                     style: ref.font.regularText10.copyWith(
-                      color: Colors.white.withOpacity(0.3),
+                      color: Colors.white.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -154,24 +148,14 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
 
   /// 🆕 실제 분할 실행
   void _executeSplit(TerminalDragData draggedData) {
-    // 🚀 변경
-    print(
-        '🎯 Execute split: ${draggedData.displayName} → ${widget.direction.name}');
-
-    // SplitDirection을 SplitType과 PanelPosition으로 변환
     final splitInfo = _convertToSplitInfo(widget.direction);
-
-    print('  └─ SplitType: ${splitInfo.splitType.name}');
-    print('  └─ TargetPosition: ${splitInfo.targetPosition.name}');
 
     // SplitLayoutProvider를 통해 실제 분할 실행
     ref.read(splitLayoutProvider.notifier).startSplit(
-          terminalId: draggedData.terminalId, // 🚀 변경
+          terminalId: draggedData.terminalId,
           splitType: splitInfo.splitType,
           targetPosition: splitInfo.targetPosition,
         );
-
-    print('✅ Split executed successfully');
   }
 
   /// 🆕 SplitDirection을 SplitType과 PanelPosition으로 변환
@@ -277,25 +261,6 @@ class _SplitDropZoneState extends ConsumerState<SplitDropZone> {
       case SplitDirection.bottomCenter:
         return 'Bot-C';
     }
-  }
-
-  /// 콘솔 로그 출력
-  void _logSplitDetection() {
-    final emoji = {
-      SplitDirection.top: '🟢',
-      SplitDirection.topSmall: '🟢',
-      SplitDirection.topCenter: '🟢',
-      SplitDirection.bottom: '🔵',
-      SplitDirection.bottomSmall: '🔵',
-      SplitDirection.bottomCenter: '🔵',
-      SplitDirection.left: '🔴',
-      SplitDirection.leftSmall: '🔴',
-      SplitDirection.right: '🟡',
-      SplitDirection.rightSmall: '🟡',
-    }[widget.direction];
-
-    print(
-        '$emoji ${_getDirectionText()} split zone detected for ${widget.currentTab.displayName}');
   }
 }
 

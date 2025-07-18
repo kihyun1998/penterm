@@ -6,7 +6,7 @@ part of 'terminal_drag_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$terminalDragHash() => r'e2b1bd09163c62bf67dee0469474faa92b1668fb';
+String _$terminalDragHash() => r'81bc26e11225d5a0343c0194276407c077064b54';
 
 /// See also [TerminalDrag].
 @ProviderFor(TerminalDrag)

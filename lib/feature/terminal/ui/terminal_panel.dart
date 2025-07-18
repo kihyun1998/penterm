@@ -79,7 +79,7 @@ class _TerminalPanelContent extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        color: ref.color.primary.withOpacity(0.2),
+                        color: ref.color.primary..withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: ref.color.primary, width: 1),
                       ),
@@ -120,7 +120,6 @@ class _PanelDragHandle extends ConsumerWidget {
       feedback: _PanelDragFeedback(panel: panel),
       childWhenDragging: _DragHandleUI(panel: panel, isDragging: true),
       onDragStarted: () {
-        print('🚀 Panel drag started: ${panel.terminalId}');
         ref.read(terminalDragProvider.notifier).startPanelDrag(
               panel.terminalId!,
               terminalDisplayName,
@@ -132,11 +131,9 @@ class _PanelDragHandle extends ConsumerWidget {
             .updatePosition(details.globalPosition);
       },
       onDragEnd: (details) {
-        print('✅ Panel drag ended: ${panel.terminalId}');
         ref.read(terminalDragProvider.notifier).endDrag();
       },
       onDraggableCanceled: (velocity, offset) {
-        print('❌ Panel drag canceled: ${panel.terminalId}');
         ref.read(terminalDragProvider.notifier).cancelDrag();
       },
       child: _DragHandleUI(panel: panel, isDragging: false),
@@ -158,8 +155,8 @@ class _DragHandleUI extends ConsumerWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: panel.isActive
-            ? ref.color.primary.withOpacity(isDragging ? 0.3 : 0.1)
-            : ref.color.surface.withOpacity(isDragging ? 0.3 : 0.1),
+            ? ref.color.primary.withValues(alpha: isDragging ? 0.3 : 0.1)
+            : ref.color.surface.withValues(alpha: isDragging ? 0.3 : 0.1),
         border: Border(
           bottom: BorderSide(
             color: panel.isActive ? ref.color.primary : ref.color.border,
@@ -194,7 +191,7 @@ class _DragHandleUI extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: ref.color.surfaceVariant.withOpacity(0.5),
+              color: ref.color.surfaceVariant..withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -230,12 +227,12 @@ class _PanelDragFeedback extends ConsumerWidget {
           border: Border.all(color: ref.color.primary, width: 2),
           boxShadow: [
             BoxShadow(
-              color: ref.color.primary.withOpacity(0.5),
+              color: ref.color.primary..withValues(alpha: 0.5),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
             BoxShadow(
-              color: ref.color.neonPurple.withOpacity(0.3),
+              color: ref.color.neonPurple..withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -290,27 +287,27 @@ class _EmptyTerminalPanel extends ConsumerWidget {
             Icon(
               Icons.add_box_outlined,
               size: 48,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white..withValues(alpha: 0.5),
             ),
             const SizedBox(height: 12),
             Text(
               'Empty Panel',
               style: ref.font.semiBoldText18.copyWith(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Position: ${panel.position.name}',
               style: ref.font.regularText14.copyWith(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white..withValues(alpha: 0.5),
               ),
             ),
             const SizedBox(height: 12),
             Text(
               'Drag a terminal here',
               style: ref.font.regularText12.copyWith(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white..withValues(alpha: 0.5),
               ),
             ),
           ],
