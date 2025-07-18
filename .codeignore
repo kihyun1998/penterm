@@ -32,3 +32,4 @@ lib/core/localization/generated
 **.g.dart
 *.log
 *.iml
+*.md
