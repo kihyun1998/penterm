@@ -62,7 +62,6 @@ penterm/
     │   │   ├── provider/
     │   │       ├── active_tabinfo_provider.dart
     │   │       ├── split_layout_provider.dart
-    │   │       ├── tab_drag_provider.dart
     │   │       ├── tab_list_provider.dart
     │   │       ├── tab_provider.dart
     │   │       └── terminal_drag_provider.dart
@@ -4442,165 +4441,6 @@ SplitLayoutState currentTabSplitState(Ref ref) {
 }
 
 ```
-## lib/feature/terminal/provider/tab_drag_provider.dart
-```dart
-// import 'package:flutter/material.dart';
-// import 'package:riverpod_annotation/riverpod_annotation.dart';
-
-// import '../model/terminal_drag_state.dart';
-// import 'tab_list_provider.dart';
-
-// part 'tab_drag_provider.g.dart';
-
-// @Riverpod(dependencies: [TabList])
-// class TabDrag extends _$TabDrag {
-//   @override
-//   TabDragState build() {
-//     return TabDragState.initial;
-//   }
-
-//   /// 드래그 시작
-//   void startDrag(String tabId) {
-//     final tabList = ref.read(tabListProvider);
-
-//     // 🚀 드래그 가능한 탭들만 필터링 (List 기반)
-//     final draggableTabs = tabList.where((tab) => tab.isClosable).toList();
-
-//     // 드래그 중인 탭이 존재하는지 확인
-//     final draggingTabExists = draggableTabs.any((tab) => tab.id == tabId);
-//     if (!draggingTabExists) {
-//       print('❌ Tab not found for drag: $tabId');
-//       return;
-//     }
-
-//     final draggingTab = draggableTabs.firstWhere((tab) => tab.id == tabId);
-//     print(
-//         '🚀 Start drag: ${draggingTab.name} (index ${draggableTabs.indexOf(draggingTab)})');
-
-//     state = state.startDrag(
-//       tabs: draggableTabs,
-//       draggingId: tabId,
-//     );
-//   }
-
-//   /// 🚀 타겟 index 업데이트 - order 대신 index 사용!
-//   void updateTarget(int newTargetIndex, {Offset? dragPosition}) {
-//     if (!state.isDragging) {
-//       print('❌ Cannot update target: not dragging');
-//       return;
-//     }
-
-//     // 🚀 유효한 index인지 확인
-//     if (newTargetIndex < 0 || newTargetIndex >= state.currentTabs.length) {
-//       print(
-//           '❌ Target index out of range: $newTargetIndex (max: ${state.currentTabs.length - 1})');
-//       return;
-//     }
-
-//     final targetTab = state.currentTabs[newTargetIndex];
-
-//     // 자기 자신에게 드롭하는 것도 허용 (원래 자리로 돌아가기)
-//     final draggingIndex = state.draggingIndex;
-//     if (draggingIndex == newTargetIndex) {
-//       print('🔄 Drop on self: ${targetTab.name} (return to original position)');
-//     } else {
-//       print('🎯 Update target: index $newTargetIndex (${targetTab.name})');
-//     }
-
-//     state = state.updateTarget(
-//       newTargetIndex: newTargetIndex,
-//       newDragPosition: dragPosition,
-//     );
-//   }
-
-//   /// 드래그 위치 업데이트 (타겟 index는 유지)
-//   void updatePosition(Offset position) {
-//     if (!state.isDragging) return;
-
-//     state = state.updatePosition(position);
-//   }
-
-//   /// 🚀 드래그 종료 (실제 순서 변경) - index 기반!
-//   void endDrag() {
-//     if (!state.isDragging) {
-//       print('❌ Cannot end drag: not dragging');
-//       return;
-//     }
-
-//     final draggingTab = state.draggingTab!;
-//     final targetIndex = state.targetIndex;
-//     final draggingIndex = state.draggingIndex!;
-
-//     print('✅ End drag: ${draggingTab.name}');
-
-//     // expectedResult의 순서 표시 (디버그용)
-//     final expectedOrder = state.expectedResult
-//         .asMap()
-//         .entries
-//         .map((e) => '${e.value.name}[${e.key}]')
-//         .join(', ');
-//     print('📋 Expected result: $expectedOrder');
-
-//     // 실제 순서 변경 적용
-//     if (targetIndex != null && targetIndex != draggingIndex) {
-//       print('🔄 Applying index change...');
-//       _applyIndexChange(draggingTab.id, draggingIndex, targetIndex);
-//     } else {
-//       print('📌 No index change needed');
-//     }
-
-//     // 드래그 상태 초기화
-//     state = state.endDrag();
-//   }
-
-//   /// 드래그 취소
-//   void cancelDrag() {
-//     if (!state.isDragging) return;
-
-//     print('❌ Cancel drag: ${state.draggingTab?.name}');
-//     state = state.endDrag();
-//   }
-
-//   /// 🚀 실제 탭 순서 변경 적용 (index 기반) - 혁신적으로 간단!
-//   void _applyIndexChange(String draggingTabId, int fromIndex, int toIndex) {
-//     final tabListNotifier = ref.read(tabListProvider.notifier);
-
-//     print(
-//         '🔧 Index change: $draggingTabId from index $fromIndex to index $toIndex');
-
-//     // 🚀 전체 탭 리스트에서의 실제 인덱스 계산
-//     final allTabs = ref.read(tabListProvider);
-//     final draggableTabs = allTabs.where((tab) => tab.isClosable).toList();
-
-//     // 드래그 가능한 탭들 중에서의 인덱스를 전체 탭 리스트의 인덱스로 변환
-//     final realFromIndex = allTabs.indexWhere((tab) => tab.id == draggingTabId);
-
-//     // toIndex에 해당하는 드래그 가능한 탭의 실제 인덱스 찾기
-//     final targetDraggableTab = draggableTabs[toIndex];
-//     final realToIndex =
-//         allTabs.indexWhere((tab) => tab.id == targetDraggableTab.id);
-
-//     if (realFromIndex == -1 || realToIndex == -1) {
-//       print(
-//           '❌ Could not find real indices: realFromIndex=$realFromIndex, realToIndex=$realToIndex');
-//       return;
-//     }
-
-//     print('🔧 Real indices: $realFromIndex → $realToIndex');
-
-//     // 🚀 TabListProvider의 간단한 reorderTab 메서드 호출!
-//     tabListNotifier.reorderTab(realFromIndex, realToIndex);
-
-//     print('✅ Index change applied successfully');
-//   }
-
-//   /// 디버그 정보 출력
-//   void printDebugInfo() {
-//     print('🐛 Debug Info:\n${state.debugInfo}');
-//   }
-// }
-
-```
 ## lib/feature/terminal/provider/tab_list_provider.dart
 ```dart
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -5991,62 +5831,216 @@ class MainScreen extends ConsumerWidget {
     );
   }
 
-  /// 🆕 터미널이 있는 패널
+  /// 🆕 터미널이 있는 패널 (드래그 핸들 추가!)
   Widget _buildTerminalPanel(PanelInfo panel, WidgetRef ref) {
     return Container(
       width: double.infinity,
       height: double.infinity,
       color: ref.theme.color.secondaryVariant,
-      child: Stack(
+      child: Column(
         children: [
-          // 🆕 패널 상단 드래그 핸들 (3단계에서 구현)
-          // TODO: 3단계에서 패널 드래그 핸들 추가
+          // 🚀 패널 드래그 핸들 (새로 추가!)
+          _buildPanelDragHandle(panel, ref),
 
           // 터미널 컨텐츠
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.terminal,
-                  size: 48,
-                  color: Colors.white,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Terminal: ${panel.terminalId}',
-                  style: ref.font.semiBoldText18.copyWith(
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.terminal,
+                    size: 48,
                     color: Colors.white,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Panel: ${panel.position.name}',
-                  style: ref.font.regularText14.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                if (panel.isActive)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: ref.color.primary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: ref.color.primary, width: 1),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Terminal: ${panel.terminalId}',
+                    style: ref.font.semiBoldText18.copyWith(
+                      color: Colors.white,
                     ),
-                    child: Text(
-                      'ACTIVE',
-                      style: ref.font.semiBoldText12.copyWith(
-                        color: ref.color.primary,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Panel: ${panel.position.name}',
+                    style: ref.font.regularText14.copyWith(
+                      color: Colors.white70,
+                    ),
+                  ),
+                  if (panel.isActive)
+                    Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: ref.color.primary.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: ref.color.primary, width: 1),
+                      ),
+                      child: Text(
+                        'ACTIVE',
+                        style: ref.font.semiBoldText12.copyWith(
+                          color: ref.color.primary,
+                        ),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// 🚀 새로 추가: 패널 드래그 핸들
+  Widget _buildPanelDragHandle(PanelInfo panel, WidgetRef ref) {
+    // 터미널 정보 가져오기 (실제로는 탭 정보에서 이름을 찾아야 함)
+    const terminalDisplayName = 'Terminal'; // 임시로 고정값, 나중에 실제 터미널 이름으로 변경
+
+    return Draggable<TerminalDragData>(
+      // 🎯 패널에서 드래그 시작!
+      data: TerminalDragData(
+        terminalId: panel.terminalId!,
+        displayName: terminalDisplayName,
+        source: DragSource.panel, // 패널에서 시작
+      ),
+      feedback: _buildPanelDragFeedback(panel, ref),
+      childWhenDragging: _buildDragHandleUI(panel, ref, isDragging: true),
+      onDragStarted: () {
+        print('🚀 Panel drag started: ${panel.terminalId}');
+        // 🎯 기존에 준비된 startPanelDrag 메서드 호출!
+        ref.read(terminalDragProvider.notifier).startPanelDrag(
+              panel.terminalId!,
+              terminalDisplayName,
+            );
+      },
+      onDragUpdate: (details) {
+        ref
+            .read(terminalDragProvider.notifier)
+            .updatePosition(details.globalPosition);
+      },
+      onDragEnd: (details) {
+        print('✅ Panel drag ended: ${panel.terminalId}');
+        ref.read(terminalDragProvider.notifier).endDrag();
+      },
+      onDraggableCanceled: (velocity, offset) {
+        print('❌ Panel drag canceled: ${panel.terminalId}');
+        ref.read(terminalDragProvider.notifier).cancelDrag();
+      },
+      child: _buildDragHandleUI(panel, ref, isDragging: false),
+    );
+  }
+
+  /// 드래그 핸들 UI
+  Widget _buildDragHandleUI(PanelInfo panel, WidgetRef ref,
+      {required bool isDragging}) {
+    return Container(
+      height: 28,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: panel.isActive
+            ? ref.color.primary.withOpacity(isDragging ? 0.3 : 0.1)
+            : ref.color.surface.withOpacity(isDragging ? 0.3 : 0.1),
+        border: Border(
+          bottom: BorderSide(
+            color: panel.isActive ? ref.color.primary : ref.color.border,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 8),
+          // 드래그 아이콘
+          Icon(
+            Icons.drag_indicator,
+            size: 16,
+            color:
+                panel.isActive ? ref.color.primary : ref.color.onSurfaceVariant,
+          ),
+          const SizedBox(width: 8),
+          // 터미널 정보
+          Expanded(
+            child: Text(
+              'Terminal: ${panel.terminalId}',
+              style: ref.font.semiBoldText12.copyWith(
+                color: panel.isActive
+                    ? ref.color.primary
+                    : ref.color.onSurfaceVariant,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          // 패널 위치 표시
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: ref.color.surfaceVariant.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              panel.position.name.toUpperCase(),
+              style: ref.font.regularText10.copyWith(
+                color: ref.color.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+
+  /// 패널 드래그 피드백 위젯
+  Widget _buildPanelDragFeedback(PanelInfo panel, WidgetRef ref) {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 200,
+        height: 80,
+        decoration: BoxDecoration(
+          color: ref.color.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: ref.color.primary, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: ref.color.primary.withOpacity(0.5),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+            BoxShadow(
+              color: ref.color.neonPurple.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.terminal,
+                size: 24,
+                color: ref.color.primary,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Panel Dragging',
+                style: ref.font.semiBoldText12.copyWith(
+                  color: ref.color.primary,
+                ),
+              ),
+              Text(
+                panel.position.name,
+                style: ref.font.regularText10.copyWith(
+                  color: ref.color.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
