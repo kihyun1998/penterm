@@ -1,7 +1,7 @@
 1. mobaXterm 같은 버전 
     - 탭 추가/제거
+    - 탭 분할 (VS Code 처럼)
     - cli로 탭 추가/제거 (id로 관리)
-    - 탭 분할 (드래그 앤 드롭)
     - cli로 분할된 탭에 관여
     - ssh,sftp 접속 (비밀번호, ssh key 접속)
     - cli로 비밀번호 ssh key 접속
